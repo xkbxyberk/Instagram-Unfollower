@@ -686,10 +686,14 @@ class _WebViewScreenState extends State<WebViewScreen>
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.camera_alt_outlined,
-                      size: 26,
-                      color: instagramColors[3],
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 15),

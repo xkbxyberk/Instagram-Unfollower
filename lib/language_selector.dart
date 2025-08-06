@@ -26,17 +26,32 @@ class LanguageSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<Locale>(
       padding: EdgeInsets.zero,
-      splashRadius: 20, // Dokunma efektini küçülttük
-      icon: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            _getCurrentFlag(context.locale),
-            style: TextStyle(fontSize: 16),
+      splashRadius: 20,
+      icon: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3),
+            width: 1,
           ),
-          SizedBox(width: 2),
-          Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 14),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _getCurrentFlag(context.locale),
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down,
+              color: Colors.white,
+              size: 14,
+            ),
+          ],
+        ),
       ),
       onSelected: (Locale locale) {
         context.setLocale(locale);
