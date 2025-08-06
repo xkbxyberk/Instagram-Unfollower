@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:instagram_unfollower_app/language_selector.dart';
 import 'dart:convert';
 import 'dart:async';
 
@@ -32,7 +34,7 @@ class _WebViewScreenState extends State<WebViewScreen>
   List<String> _unfollowers = [];
   bool _isLoading = false;
   String _errorMessage = '';
-  String _progressMessage = 'Analiz hazırlanıyor...';
+  String _progressMessage = '';
   String _currentUsername = '';
   bool _showManualInput = false;
   bool _hasResults = false;
@@ -180,11 +182,11 @@ class _WebViewScreenState extends State<WebViewScreen>
       captureUsername();
       
       const retryTimeouts = [
-        { delay: 200, reason: 'Anında yüklenme' },
-        { delay: 600, reason: 'Hızlı yüklenme' },
-        { delay: 1200, reason: 'Normal yüklenme' },
-        { delay: 2500, reason: 'Yavaş yüklenme' },
-        { delay: 4000, reason: 'Son şans' }
+        { delay: 200, reason: 'Instant loading' },
+        { delay: 600, reason: 'Fast loading' },
+        { delay: 1200, reason: 'Normal loading' },
+        { delay: 2500, reason: 'Slow loading' },
+        { delay: 4000, reason: 'Last chance' }
       ];
       
       retryTimeouts.forEach(({ delay, reason }) => {
@@ -278,12 +280,13 @@ class _WebViewScreenState extends State<WebViewScreen>
       const data = await fetch(url, fetchOptions).then((r) => r.json());
       
       if (!data || !data.users) {
-        throw new Error('API yanıt hatası: ' + JSON.stringify(data));
+        throw new Error('API Response Error: ' + JSON.stringify(data));
       }
       
+      const progressMessage = list === 'followers' ? 'Loading followers...' : 'Loading following...';
       UnfollowerChannel.postMessage(JSON.stringify({
           status: 'progress',
-          message: `Yüklenen ${list}: ${data.users.length}`
+          message: progressMessage + ` ${data.users.length}`
       }));
 
       if (data.next_max_id) {
@@ -306,20 +309,20 @@ class _WebViewScreenState extends State<WebViewScreen>
     };
 
     const getUserFriendshipStats = async (username) => {
-      UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Kullanıcı bilgileri alınıyor...'}));
+      UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Getting user info...'}));
       
       const user_id = await getUserId(username);
       if (!user_id) {
-        throw new Error(`'${username}' kullanıcı adı bulunamadı.`);
+        throw new Error(`User '${username}' not found.`);
       }
       
-      UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Takipçiler yükleniyor...'}));
+      UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Loading followers...'}));
       const followers = await getFollowers(user_id);
       
-      UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Takip edilenler yükleniyor...'}));
+      UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Loading following...'}));
       const following = await getFollowing(user_id);
       
-      UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Listeler karşılaştırılıyor...'}));
+      UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Comparing lists...'}));
       
       const followersUsernames = followers.map((follower) => follower.username.toLowerCase());
       const followingUsernames = following.map((followed) => followed.username.toLowerCase());
@@ -366,6 +369,7 @@ class _WebViewScreenState extends State<WebViewScreen>
   void initState() {
     super.initState();
     _controller = WebViewController();
+    _progressMessage = 'preparing_analysis'.tr();
 
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 400),
@@ -399,11 +403,11 @@ class _WebViewScreenState extends State<WebViewScreen>
 
     _slideAnimation =
         Tween<Offset>(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _slideController,
-            curve: Curves.easeInOutCubic,
-          ),
-        );
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
 
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
@@ -413,13 +417,12 @@ class _WebViewScreenState extends State<WebViewScreen>
       CurvedAnimation(parent: _bounceController, curve: Curves.elasticOut),
     );
 
-    _slideInAnimation =
-        Tween<Offset>(
-          begin: const Offset(1.0, 0.0),
-          end: const Offset(0.0, 0.0),
-        ).animate(
-          CurvedAnimation(parent: _slideInController, curve: Curves.elasticOut),
-        );
+    _slideInAnimation = Tween<Offset>(
+      begin: const Offset(1.0, 0.0),
+      end: const Offset(0.0, 0.0),
+    ).animate(
+      CurvedAnimation(parent: _slideInController, curve: Curves.elasticOut),
+    );
 
     _glowAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
@@ -448,7 +451,18 @@ class _WebViewScreenState extends State<WebViewScreen>
               switch (decodedMessage['status']) {
                 case 'progress':
                   setState(() {
-                    _progressMessage = decodedMessage['message'];
+                    String progressKey = decodedMessage['message'];
+                    if (progressKey.contains('Loading followers')) {
+                      _progressMessage = 'loading_followers'.tr();
+                    } else if (progressKey.contains('Loading following')) {
+                      _progressMessage = 'loading_following'.tr();
+                    } else if (progressKey.contains('Comparing lists')) {
+                      _progressMessage = 'comparing_lists'.tr();
+                    } else if (progressKey.contains('Getting user info')) {
+                      _progressMessage = 'getting_user_info'.tr();
+                    } else {
+                      _progressMessage = decodedMessage['message'];
+                    }
                   });
                   break;
                 case 'username_captured':
@@ -491,7 +505,7 @@ class _WebViewScreenState extends State<WebViewScreen>
           } catch (e) {
             setState(() {
               _isLoading = false;
-              _errorMessage = "Veri alınırken bir sorun oluştu.";
+              _errorMessage = 'data_retrieval_error'.tr();
               _progressMessage = '';
             });
           }
@@ -579,7 +593,7 @@ class _WebViewScreenState extends State<WebViewScreen>
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${selectedList.length} kullanıcı adı kopyalandı!',
+                  'users_copied'.tr(args: [selectedList.length.toString()]),
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
               ),
@@ -693,8 +707,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                               Colors.white.withValues(alpha: 0.9),
                             ],
                           ).createShader(bounds),
-                          child: const Text(
-                            'Instagram',
+                          child: Text(
+                            'app_name'.tr(),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
@@ -710,8 +724,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                               Colors.white.withValues(alpha: 0.6),
                             ],
                           ).createShader(bounds),
-                          child: const Text(
-                            'Unfollower Analyzer',
+                          child: Text(
+                            'app_subtitle'.tr(),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
@@ -723,6 +737,10 @@ class _WebViewScreenState extends State<WebViewScreen>
                       ],
                     ),
                   ),
+
+                  // Dil seçici
+                  LanguageSelector(),
+                  const SizedBox(width: 10),
 
                   if (_isLoggedIn)
                     Container(
@@ -750,8 +768,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Text(
-                            'Bağlı',
+                          Text(
+                            'connected'.tr(),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -846,8 +864,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Instagram Analiz',
+                    Text(
+                      'instagram_analysis'.tr(),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -856,7 +874,9 @@ class _WebViewScreenState extends State<WebViewScreen>
                       ),
                     ),
                     Text(
-                      _hasResults ? 'Analiz Tamamlandı' : 'Analiz Merkezi',
+                      _hasResults
+                          ? 'analysis_completed'.tr()
+                          : 'analysis_center'.tr(),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 14,
@@ -962,13 +982,12 @@ class _WebViewScreenState extends State<WebViewScreen>
             ),
           ),
           const SizedBox(height: 30),
-
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [instagramColors[2], instagramColors[4]],
             ).createShader(bounds),
-            child: const Text(
-              'Instagram\'a Başarıyla Bağlandı!',
+            child: Text(
+              'connected_successfully'.tr(),
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
@@ -977,10 +996,9 @@ class _WebViewScreenState extends State<WebViewScreen>
               textAlign: TextAlign.center,
             ),
           ),
-
           const SizedBox(height: 18),
           Text(
-            'Artık seni takip etmeyen kişileri analiz edebiliriz. Detaylı rapor için analizi başlat.',
+            'ready_to_analyze'.tr(),
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey.shade600,
@@ -988,9 +1006,7 @@ class _WebViewScreenState extends State<WebViewScreen>
             ),
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 40),
-
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -1024,7 +1040,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                   _isLoading = true;
                   _errorMessage = '';
                   _unfollowers.clear();
-                  _progressMessage = 'Analiz başlatılıyor...';
+                  _progressMessage = 'starting_analysis'.tr();
                 });
                 _controller.runJavaScript('analyzeAccount()');
               },
@@ -1033,8 +1049,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                 size: 28,
                 color: Colors.white,
               ),
-              label: const Text(
-                'Hesabımı Analiz Et',
+              label: Text(
+                'analyze_my_account'.tr(),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
@@ -1090,15 +1106,13 @@ class _WebViewScreenState extends State<WebViewScreen>
               ),
             ],
           ),
-
           const SizedBox(height: 30),
-
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [instagramColors[2], instagramColors[4]],
             ).createShader(bounds),
-            child: const Text(
-              'Analiz Devam Ediyor',
+            child: Text(
+              'analysis_in_progress'.tr(),
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -1106,7 +1120,6 @@ class _WebViewScreenState extends State<WebViewScreen>
               ),
             ),
           ),
-
           const SizedBox(height: 18),
           Text(
             _progressMessage,
@@ -1117,9 +1130,7 @@ class _WebViewScreenState extends State<WebViewScreen>
             ),
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 30),
-
           Container(
             width: double.infinity,
             height: 6,
@@ -1186,7 +1197,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_unfollowers.length} Kişi Bulundu',
+                      'people_found'.tr(args: [_unfollowers.length.toString()]),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -1195,7 +1206,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Seni takip etmeyen hesaplar',
+                      'not_following_back'.tr(),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade600,
@@ -1208,7 +1219,6 @@ class _WebViewScreenState extends State<WebViewScreen>
             ],
           ),
         ),
-
         if (_unfollowers.isNotEmpty)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -1230,18 +1240,19 @@ class _WebViewScreenState extends State<WebViewScreen>
                           _selectedUsers.length == _unfollowers.length
                               ? Icons.check_box
                               : _selectedUsers.isEmpty
-                              ? Icons.check_box_outline_blank
-                              : Icons.indeterminate_check_box,
+                                  ? Icons.check_box_outline_blank
+                                  : Icons.indeterminate_check_box,
                           color: Colors.white,
                           size: 22,
                         ),
                         const SizedBox(width: 10),
                         Text(
                           _selectedUsers.isEmpty
-                              ? 'Tümünü Seç'
+                              ? 'select_all'.tr()
                               : _selectedUsers.length == _unfollowers.length
-                              ? 'Tümünü Temizle'
-                              : '${_selectedUsers.length} Seçili',
+                                  ? 'clear_all'.tr()
+                                  : 'selected_count'.tr(
+                                      args: [_selectedUsers.length.toString()]),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -1265,15 +1276,13 @@ class _WebViewScreenState extends State<WebViewScreen>
                         color: Colors.white,
                         size: 18,
                       ),
-                      tooltip: 'Seçilenleri Kopyala',
+                      tooltip: 'copy_selected'.tr(),
                     ),
                   ),
               ],
             ),
           ),
-
         const SizedBox(height: 10),
-
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1342,8 +1351,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                       color: isSelected ? instagramColors[3] : Colors.black87,
                     ),
                   ),
-                  subtitle: const Text(
-                    'Seni takip etmiyor',
+                  subtitle: Text(
+                    'not_following'.tr(),
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                   trailing: Container(
@@ -1381,7 +1390,6 @@ class _WebViewScreenState extends State<WebViewScreen>
             },
           ),
         ),
-
         Padding(
           padding: const EdgeInsets.all(20),
           child: Container(
@@ -1408,14 +1416,14 @@ class _WebViewScreenState extends State<WebViewScreen>
                   _showManualInput = false;
                   _hasResults = false;
                   _isLoading = true;
-                  _progressMessage = 'Analiz başlatılıyor...';
+                  _progressMessage = 'starting_analysis'.tr();
                   _selectedUsers.clear();
                 });
                 _controller.runJavaScript('analyzeAccount()');
               },
               icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-              label: const Text(
-                'Tekrar Analiz Et',
+              label: Text(
+                'restart_analysis'.tr(),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -1456,15 +1464,13 @@ class _WebViewScreenState extends State<WebViewScreen>
               color: Colors.orange.shade600,
             ),
           ),
-
           const SizedBox(height: 30),
-
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [instagramColors[6], instagramColors[8]],
             ).createShader(bounds),
-            child: const Text(
-              'Kullanıcı Adı Gerekli',
+            child: Text(
+              'username_required'.tr(),
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -1472,10 +1478,9 @@ class _WebViewScreenState extends State<WebViewScreen>
               ),
             ),
           ),
-
           const SizedBox(height: 18),
           Text(
-            'Instagram kullanıcı adınızı manuel olarak girin ve analizi başlatın.',
+            'enter_username_manually'.tr(),
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey.shade600,
@@ -1483,9 +1488,7 @@ class _WebViewScreenState extends State<WebViewScreen>
             ),
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 40),
-
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -1502,7 +1505,7 @@ class _WebViewScreenState extends State<WebViewScreen>
               controller: _usernameController,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               decoration: InputDecoration(
-                labelText: 'Instagram Kullanıcı Adı',
+                labelText: 'instagram_username'.tr(),
                 labelStyle: TextStyle(color: instagramColors[3]),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -1518,7 +1521,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                   Icons.alternate_email,
                   color: instagramColors[3],
                 ),
-                hintText: 'kullanici_adi',
+                hintText: 'username_placeholder'.tr(),
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -1529,9 +1532,7 @@ class _WebViewScreenState extends State<WebViewScreen>
               autocorrect: false,
             ),
           ),
-
           const SizedBox(height: 30),
-
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -1567,7 +1568,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                     _isLoading = true;
                     _errorMessage = '';
                     _unfollowers.clear();
-                    _progressMessage = 'Analiz başlatılıyor...';
+                    _progressMessage = 'starting_analysis'.tr();
                     _showManualInput = false;
                   });
                   _controller.runJavaScript('analyzeAccount("$username")');
@@ -1578,8 +1579,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                 size: 24,
                 color: Colors.white,
               ),
-              label: const Text(
-                'Analizi Başlat',
+              label: Text(
+                'start_analysis'.tr(),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
@@ -1620,18 +1621,15 @@ class _WebViewScreenState extends State<WebViewScreen>
               color: Colors.red.shade600,
             ),
           ),
-
           const SizedBox(height: 30),
-
           Text(
-            'Bir Hata Oluştu',
+            'error_occurred'.tr(),
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.red.shade700,
             ),
           ),
-
           const SizedBox(height: 18),
           Text(
             _errorMessage,
@@ -1642,9 +1640,7 @@ class _WebViewScreenState extends State<WebViewScreen>
             ),
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 40),
-
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -1669,8 +1665,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                 });
               },
               icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-              label: const Text(
-                'Tekrar Dene',
+              label: Text(
+                'try_again'.tr(),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
@@ -1792,9 +1788,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 12),
-
                           if (_hasResults)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -1820,9 +1814,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                                 ),
                               ),
                             ),
-
                           const SizedBox(height: 16),
-
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Row(
@@ -1838,7 +1830,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                                     color: Colors.white.withValues(
                                       alpha:
                                           (0.4 + (0.3 * _glowAnimation.value)) *
-                                          (index == 1 ? 1.2 : 0.8),
+                                              (index == 1 ? 1.2 : 0.8),
                                     ),
                                     borderRadius: BorderRadius.circular(2),
                                   ),
@@ -1870,15 +1862,12 @@ class _WebViewScreenState extends State<WebViewScreen>
               Expanded(child: WebViewWidget(controller: _controller)),
             ],
           ),
-
           _buildEdgeIndicator(),
-
           if (_isPanelOpen)
             GestureDetector(
               onTap: _closePanel,
               child: Container(color: Colors.black.withValues(alpha: 0.4)),
             ),
-
           if (_isPanelOpen)
             Positioned(right: 0, top: 0, bottom: 0, child: _buildSlidePanel()),
         ],
