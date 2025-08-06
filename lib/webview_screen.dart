@@ -627,7 +627,6 @@ class _WebViewScreenState extends State<WebViewScreen>
       animation: _headerAnimation,
       builder: (context, child) {
         return Container(
-          height: 100 + MediaQuery.of(context).padding.top,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
