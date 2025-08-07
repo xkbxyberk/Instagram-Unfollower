@@ -40,6 +40,8 @@ class _WebViewScreenState extends State<WebViewScreen>
   bool _hasResults = false;
   bool _isPanelOpen = false;
   Set<String> _selectedUsers = <String>{};
+  String _lastUrl = '';
+  Timer? _urlMonitorTimer;
 
   static const List<Color> instagramColors = [
     Color(0xFF405de6),
@@ -53,6 +55,81 @@ class _WebViewScreenState extends State<WebViewScreen>
     Color(0xFFfcaf45),
     Color(0xFFffdc80),
   ];
+
+  // Logout detection için JavaScript kodu
+  final String logoutDetectionCode = r'''
+    // Logout detection
+    const checkLoginStatus = () => {
+      try {
+        // URL kontrolü
+        const currentUrl = window.location.href;
+        const isLoginPage = currentUrl.includes('/accounts/login') || 
+                           currentUrl.includes('/accounts/emailsignup') ||
+                           currentUrl.includes('/accounts/signin');
+        
+        // Login form kontrolü
+        const hasLoginForm = document.querySelector('input[name="username"]') !== null;
+        
+        // Instagram ana sayfası kontrolü
+        const isMainPage = currentUrl === 'https://www.instagram.com/' || 
+                          currentUrl.includes('instagram.com/?') ||
+                          currentUrl.match(/^https:\/\/www\.instagram\.com\/?$/);
+        
+        // Ana sayfada login formu varsa logout olmuş demektir
+        if (isMainPage && hasLoginForm) {
+          UnfollowerChannel.postMessage(JSON.stringify({
+            status: 'logged_out',
+            reason: 'login_form_on_main_page'
+          }));
+          return;
+        }
+        
+        // Login sayfasına yönlendirme
+        if (isLoginPage) {
+          UnfollowerChannel.postMessage(JSON.stringify({
+            status: 'logged_out',
+            reason: 'redirected_to_login'
+          }));
+          return;
+        }
+        
+        // Instagram sayfasında ama login elementi yoksa giriş yapmış demektir
+        if (currentUrl.includes('instagram.com') && !isLoginPage && !hasLoginForm) {
+          const hasNavigation = document.querySelector('nav') !== null ||
+                                document.querySelector('[role="navigation"]') !== null ||
+                                document.querySelector('header') !== null;
+          
+          if (hasNavigation) {
+            UnfollowerChannel.postMessage(JSON.stringify({
+              status: 'logged_in_confirmed',
+              url: currentUrl
+            }));
+          }
+        }
+        
+      } catch (e) {
+        console.log('Login status check error:', e);
+      }
+    };
+    
+    // Her 2 saniyede bir kontrol et
+    setInterval(checkLoginStatus, 2000);
+    
+    // URL değişikliklerini izle
+    let lastUrl = window.location.href;
+    const monitorUrlChanges = () => {
+      const currentUrl = window.location.href;
+      if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        setTimeout(checkLoginStatus, 500); // URL değişikliği sonrası kısa bekleme
+      }
+    };
+    
+    setInterval(monitorUrlChanges, 1000);
+    
+    // Hemen bir kontrol yap
+    checkLoginStatus();
+  ''';
 
   final String loginCaptureCode = r'''
     const captureUsername = () => {
@@ -449,6 +526,15 @@ class _WebViewScreenState extends State<WebViewScreen>
             final decodedMessage = jsonDecode(message.message);
             if (decodedMessage is Map) {
               switch (decodedMessage['status']) {
+                case 'logged_out':
+                  print('Logout detected: ${decodedMessage['reason']}');
+                  _handleLogout();
+                  break;
+                case 'logged_in_confirmed':
+                  if (!_isLoggedIn) {
+                    _handleLogin();
+                  }
+                  break;
                 case 'progress':
                   setState(() {
                     String progressKey = decodedMessage['message'];
@@ -515,38 +601,85 @@ class _WebViewScreenState extends State<WebViewScreen>
       await _controller.setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
+            _lastUrl = url;
+            print('Page finished loading: $url');
+
+            // Her sayfa yüklendiğinde logout detection çalıştır
+            _controller.runJavaScript(logoutDetectionCode);
+
             if (url.contains('accounts/login') ||
                 url.contains('accounts/emailsignup')) {
+              print('Login page detected, starting username capture');
               _controller.runJavaScript(loginCaptureCode);
             } else if (url.contains('https://www.instagram.com/') &&
                 !url.contains('accounts/login') &&
                 !url.contains('accounts/emailsignup')) {
-              if (!_isLoggedIn) {
-                setState(() {
-                  _isLoggedIn = true;
-                });
-                _controller.runJavaScript(analysisJavaScriptCode);
-
-                Future.delayed(const Duration(milliseconds: 800), () {
-                  _slideInController.forward();
-                  _bounceController.forward();
-
-                  Future.delayed(const Duration(seconds: 10), () {
-                    if (_isLoggedIn && !_isPanelOpen && !_hasResults) {
-                      _bounceController.reset();
-                      _bounceController.forward();
-                    }
-                  });
-                });
-              }
+              // Ana sayfaya erişim durumunda analiz kodunu çalıştır
+              _controller.runJavaScript(analysisJavaScriptCode);
             }
           },
         ),
       );
+
       await _controller.loadRequest(
         Uri.parse('https://www.instagram.com/accounts/login/'),
       );
     });
+  }
+
+  void _handleLogin() {
+    print('Login confirmed');
+    setState(() {
+      _isLoggedIn = true;
+    });
+
+    // Analysis kodunu çalıştır
+    _controller.runJavaScript(analysisJavaScriptCode);
+
+    Future.delayed(const Duration(milliseconds: 800), () {
+      _slideInController.forward();
+      _bounceController.forward();
+
+      Future.delayed(const Duration(seconds: 10), () {
+        if (_isLoggedIn && !_isPanelOpen && !_hasResults) {
+          _bounceController.reset();
+          _bounceController.forward();
+        }
+      });
+    });
+  }
+
+  void _handleLogout() {
+    print('Handling logout - resetting state');
+
+    // LocalStorage'ı temizle
+    _controller.runJavaScript('clearStoredUsername()');
+
+    setState(() {
+      _isLoggedIn = false;
+      _unfollowers.clear();
+      _isLoading = false;
+      _errorMessage = '';
+      _progressMessage = '';
+      _currentUsername = '';
+      _showManualInput = false;
+      _hasResults = false;
+      _selectedUsers.clear();
+    });
+
+    // Panel açıksa kapat
+    if (_isPanelOpen) {
+      _closePanel();
+    }
+
+    // Animasyonları sıfırla
+    _slideInController.reset();
+    _bounceController.reset();
+
+    // Username input'u temizle
+    _usernameController.clear();
+
+    print('State reset completed');
   }
 
   @override
@@ -558,6 +691,7 @@ class _WebViewScreenState extends State<WebViewScreen>
     _slideInController.dispose();
     _glowController.dispose();
     _headerAnimationController.dispose();
+    _urlMonitorTimer?.cancel();
     super.dispose();
   }
 
@@ -745,41 +879,46 @@ class _WebViewScreenState extends State<WebViewScreen>
                   LanguageSelector(),
                   const SizedBox(width: 10),
 
+                  // Connected durumu sadece giriş yapılmışsa göster
                   if (_isLoggedIn)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.2),
-                        border: Border.all(
-                          color: Colors.green.shade300,
-                          width: 1,
+                    AnimatedOpacity(
+                      opacity: _isLoggedIn ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.2),
+                          border: Border.all(
+                            color: Colors.green.shade300,
+                            width: 1,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'connected'.tr(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Text(
+                              'connected'.tr(),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                 ],
@@ -1684,6 +1823,7 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   Widget _buildEdgeIndicator() {
+    // Sadece giriş yapıldığında ve panel açık değilken göster
     if (!_isLoggedIn || _isPanelOpen) return const SizedBox();
 
     return Positioned(
