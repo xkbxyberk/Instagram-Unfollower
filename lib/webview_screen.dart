@@ -40,7 +40,6 @@ class _WebViewScreenState extends State<WebViewScreen>
   bool _hasResults = false;
   bool _isPanelOpen = false;
   Set<String> _selectedUsers = <String>{};
-  String _lastUrl = '';
   Timer? _urlMonitorTimer;
 
   static const List<Color> instagramColors = [
@@ -56,26 +55,20 @@ class _WebViewScreenState extends State<WebViewScreen>
     Color(0xFFffdc80),
   ];
 
-  // Logout detection için JavaScript kodu
   final String logoutDetectionCode = r'''
-    // Logout detection
     const checkLoginStatus = () => {
       try {
-        // URL kontrolü
         const currentUrl = window.location.href;
         const isLoginPage = currentUrl.includes('/accounts/login') || 
                            currentUrl.includes('/accounts/emailsignup') ||
                            currentUrl.includes('/accounts/signin');
         
-        // Login form kontrolü
         const hasLoginForm = document.querySelector('input[name="username"]') !== null;
         
-        // Instagram ana sayfası kontrolü
         const isMainPage = currentUrl === 'https://www.instagram.com/' || 
                           currentUrl.includes('instagram.com/?') ||
                           currentUrl.match(/^https:\/\/www\.instagram\.com\/?$/);
         
-        // Ana sayfada login formu varsa logout olmuş demektir
         if (isMainPage && hasLoginForm) {
           UnfollowerChannel.postMessage(JSON.stringify({
             status: 'logged_out',
@@ -84,7 +77,6 @@ class _WebViewScreenState extends State<WebViewScreen>
           return;
         }
         
-        // Login sayfasına yönlendirme
         if (isLoginPage) {
           UnfollowerChannel.postMessage(JSON.stringify({
             status: 'logged_out',
@@ -93,7 +85,6 @@ class _WebViewScreenState extends State<WebViewScreen>
           return;
         }
         
-        // Instagram sayfasında ama login elementi yoksa giriş yapmış demektir
         if (currentUrl.includes('instagram.com') && !isLoginPage && !hasLoginForm) {
           const hasNavigation = document.querySelector('nav') !== null ||
                                 document.querySelector('[role="navigation"]') !== null ||
@@ -112,22 +103,19 @@ class _WebViewScreenState extends State<WebViewScreen>
       }
     };
     
-    // Her 2 saniyede bir kontrol et
     setInterval(checkLoginStatus, 2000);
     
-    // URL değişikliklerini izle
     let lastUrl = window.location.href;
     const monitorUrlChanges = () => {
       const currentUrl = window.location.href;
       if (currentUrl !== lastUrl) {
         lastUrl = currentUrl;
-        setTimeout(checkLoginStatus, 500); // URL değişikliği sonrası kısa bekleme
+        setTimeout(checkLoginStatus, 500);
       }
     };
     
     setInterval(monitorUrlChanges, 1000);
     
-    // Hemen bir kontrol yap
     checkLoginStatus();
   ''';
 
@@ -194,7 +182,6 @@ class _WebViewScreenState extends State<WebViewScreen>
                 }));
               }
             } catch (e) {
-              // Handle error silently
             }
           }
         };
@@ -527,7 +514,6 @@ class _WebViewScreenState extends State<WebViewScreen>
             if (decodedMessage is Map) {
               switch (decodedMessage['status']) {
                 case 'logged_out':
-                  print('Logout detected: ${decodedMessage['reason']}');
                   _handleLogout();
                   break;
                 case 'logged_in_confirmed':
@@ -601,20 +587,14 @@ class _WebViewScreenState extends State<WebViewScreen>
       await _controller.setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
-            _lastUrl = url;
-            print('Page finished loading: $url');
-
-            // Her sayfa yüklendiğinde logout detection çalıştır
             _controller.runJavaScript(logoutDetectionCode);
 
             if (url.contains('accounts/login') ||
                 url.contains('accounts/emailsignup')) {
-              print('Login page detected, starting username capture');
               _controller.runJavaScript(loginCaptureCode);
             } else if (url.contains('https://www.instagram.com/') &&
                 !url.contains('accounts/login') &&
                 !url.contains('accounts/emailsignup')) {
-              // Ana sayfaya erişim durumunda analiz kodunu çalıştır
               _controller.runJavaScript(analysisJavaScriptCode);
             }
           },
@@ -628,12 +608,10 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   void _handleLogin() {
-    print('Login confirmed');
     setState(() {
       _isLoggedIn = true;
     });
 
-    // Analysis kodunu çalıştır
     _controller.runJavaScript(analysisJavaScriptCode);
 
     Future.delayed(const Duration(milliseconds: 800), () {
@@ -650,9 +628,6 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   void _handleLogout() {
-    print('Handling logout - resetting state');
-
-    // LocalStorage'ı temizle
     _controller.runJavaScript('clearStoredUsername()');
 
     setState(() {
@@ -667,19 +642,14 @@ class _WebViewScreenState extends State<WebViewScreen>
       _selectedUsers.clear();
     });
 
-    // Panel açıksa kapat
     if (_isPanelOpen) {
       _closePanel();
     }
 
-    // Animasyonları sıfırla
     _slideInController.reset();
     _bounceController.reset();
 
-    // Username input'u temizle
     _usernameController.clear();
-
-    print('State reset completed');
   }
 
   @override
@@ -831,7 +801,6 @@ class _WebViewScreenState extends State<WebViewScreen>
                     ),
                   ),
                   const SizedBox(width: 15),
-
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -874,12 +843,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                       ],
                     ),
                   ),
-
-                  // Dil seçici
                   LanguageSelector(),
                   const SizedBox(width: 10),
-
-                  // Connected durumu sadece giriş yapılmışsa göster
                   if (_isLoggedIn)
                     AnimatedOpacity(
                       opacity: _isLoggedIn ? 1.0 : 0.0,
@@ -1823,7 +1788,6 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   Widget _buildEdgeIndicator() {
-    // Sadece giriş yapıldığında ve panel açık değilken göster
     if (!_isLoggedIn || _isPanelOpen) return const SizedBox();
 
     return Positioned(
