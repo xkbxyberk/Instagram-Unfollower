@@ -7,7 +7,12 @@ import 'widgets/slide_panel.dart';
 import 'widgets/edge_indicator.dart';
 
 class WebViewScreen extends StatefulWidget {
-  const WebViewScreen({super.key});
+  final VoidCallback? onAnalysisCompleted;
+
+  const WebViewScreen({
+    super.key,
+    this.onAnalysisCompleted,
+  });
 
   @override
   State<WebViewScreen> createState() => _WebViewScreenState();
@@ -22,7 +27,7 @@ class _WebViewScreenState extends State<WebViewScreen>
   void initState() {
     super.initState();
     initializeAnimations();
-    initializeWebView();
+    initializeWebView(onAnalyticsUpdate: widget.onAnalysisCompleted);
   }
 
   @override

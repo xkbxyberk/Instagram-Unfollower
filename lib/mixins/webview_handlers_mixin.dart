@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'dart:convert';
 import 'dart:async';
 import '../constants/javascript_constants.dart';
+import '../services/analytics_service.dart';
 import 'animation_controllers_mixin.dart';
 
 mixin WebViewHandlersMixin<T extends StatefulWidget>
@@ -24,7 +25,11 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
   Set<String> selectedUsers = <String>{};
   Timer? urlMonitorTimer;
 
-  void initializeWebView() {
+  // Analytics callback - Ana screen'e dashboard güncellemesi için
+  VoidCallback? onAnalysisCompleted;
+
+  void initializeWebView({VoidCallback? onAnalyticsUpdate}) {
+    onAnalysisCompleted = onAnalyticsUpdate;
     progressMessage = 'preparing_analysis'.tr();
 
     controller = WebViewController();
@@ -105,15 +110,8 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
             }
         }
       } else if (decodedMessage is List) {
-        setState(() {
-          unfollowers = decodedMessage.cast<String>();
-          isLoading = false;
-          progressMessage = '';
-          showManualInput = false;
-          hasResults = true;
-          selectedUsers.clear();
-        });
-        openPanel();
+        // Analiz tamamlandı - Analytics'e kaydet
+        _recordAnalysisCompletion(decodedMessage.cast<String>());
       }
     } catch (e) {
       setState(() {
@@ -121,6 +119,69 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
         errorMessage = 'data_retrieval_error'.tr();
         progressMessage = '';
       });
+    }
+  }
+
+  // Analiz tamamlandığında analytics'e kaydet
+  Future<void> _recordAnalysisCompletion(List<String> unfollowersList) async {
+    try {
+      // Analytics servisine analiz tamamlandığını kaydet
+      await AnalyticsService.instance.recordAnalysis();
+
+      // Sonuçları güncelle
+      setState(() {
+        unfollowers = unfollowersList;
+        isLoading = false;
+        progressMessage = '';
+        showManualInput = false;
+        hasResults = true;
+        selectedUsers.clear();
+      });
+
+      // Dashboard güncellemesi için callback'i çağır
+      if (onAnalysisCompleted != null) {
+        onAnalysisCompleted!();
+      }
+
+      // Panel'i aç
+      openPanel();
+
+      // Başarı mesajı göster
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${'analysis_completed'.tr()} - ${unfollowersList.length} ${'people_found'.tr().toLowerCase()}', // string interpolation düzeltmesi
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      // Analytics kaydetme hatası - sessizce geç
+      setState(() {
+        unfollowers = unfollowersList;
+        isLoading = false;
+        progressMessage = '';
+        showManualInput = false;
+        hasResults = true;
+        selectedUsers.clear();
+      });
+      openPanel();
     }
   }
 
@@ -209,12 +270,12 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.copy, color: Colors.white),
-              SizedBox(width: 10),
+              const Icon(Icons.copy, color: Colors.white),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'users_copied'.tr(args: [selectedList.length.toString()]),
-                  style: TextStyle(fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ),
             ],
@@ -224,7 +285,7 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
 
@@ -242,13 +303,22 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     });
   }
 
-  void startAnalysis({String? username}) {
+  // Analiz başlatma (Analytics entegrasyonu ile)
+  Future<void> startAnalysis({String? username}) async {
     setState(() {
       isLoading = true;
       errorMessage = '';
       unfollowers.clear();
       progressMessage = 'starting_analysis'.tr();
     });
+
+    // Analytics'e analiz başlatıldığını kaydet (sadece başlangıç)
+    try {
+      // NOT: Burada kaydetmiyoruz, sadece tamamlandığında kaydedeceğiz
+      // Bu şekilde başarısız analizler sayılmaz
+    } catch (e) {
+      // Sessizce devam et
+    }
 
     if (username != null) {
       controller.runJavaScript('analyzeAccount("$username")');

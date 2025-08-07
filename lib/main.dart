@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:instagram_unfollower_app/webview_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,8 +51,43 @@ class MyApp extends StatelessWidget {
         primaryColor: const Color(0xFF833ab4),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const WebViewScreen(),
+      home: const StartupScreen(),
       debugShowCheckedModeBanner: false,
     );
+  }
+}
+
+class StartupScreen extends StatelessWidget {
+  const StartupScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _checkFirstLaunch(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // Yükleme ekranı
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        final isFirstLaunch = snapshot.data ?? true;
+
+        if (isFirstLaunch) {
+          return const OnboardingScreen();
+        } else {
+          return const MainScreen();
+        }
+      },
+    );
+  }
+
+  Future<bool> _checkFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final completed = prefs.getBool('onboarding_completed') ?? false;
+    return !completed; // İlk açılış = onboarding tamamlanmamış
   }
 }
