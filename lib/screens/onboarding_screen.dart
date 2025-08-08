@@ -56,6 +56,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
+  void _skipToRiskPage() {
+    _pageController.animateToPage(
+      _pages.length - 1, // Son sayfaya (risk kabul sayfası) git
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
   void _nextPage() {
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
@@ -107,7 +115,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           SafeArea(
             child: Column(
               children: [
-                // Skip button
+                // Skip button - sadece son sayfa değilse göster
                 if (_currentPage < _pages.length - 1)
                   Padding(
                     padding: const EdgeInsets.all(20),
@@ -115,7 +123,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                          onPressed: () => _completeOnboarding(),
+                          onPressed: () => _skipToRiskPage(),
                           child: Text(
                             'onboarding_skip'.tr(),
                             style: const TextStyle(
