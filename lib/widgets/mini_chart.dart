@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/analytics_service.dart';
+import '../utils/dark_theme_colors.dart';
 
 class MiniChart extends StatefulWidget {
   final List<DailyUsageData> data;
@@ -44,6 +45,8 @@ class _MiniChartState extends State<MiniChart>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (widget.data.isEmpty) {
       return SizedBox(height: widget.height);
     }
@@ -88,6 +91,15 @@ class _MiniChartState extends State<MiniChart>
                             ],
                           ),
                           borderRadius: BorderRadius.circular(2),
+                          boxShadow: isDark
+                              ? [
+                                  BoxShadow(
+                                    color: widget.color.withValues(alpha: 0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -96,7 +108,9 @@ class _MiniChartState extends State<MiniChart>
                         dayData.dayName,
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.grey.shade600,
+                          color: isDark
+                              ? DarkThemeColors.secondaryText
+                              : Colors.grey.shade600,
                           fontWeight: FontWeight.w500,
                         ),
                       ),

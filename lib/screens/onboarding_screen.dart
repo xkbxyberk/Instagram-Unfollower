@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/instagram_colors.dart';
+import '../utils/dark_theme_colors.dart';
 import '../screens/main_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -16,56 +17,287 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   bool _riskAccepted = false;
 
-  final List<OnboardingPage> _pages = [
-    OnboardingPage(
-      icon: Icons.waving_hand_outlined,
-      title: 'onboarding_welcome',
-      description: 'onboarding_welcome_desc',
-      gradient: [
-        InstagramColors.gradientColors[0],
-        InstagramColors.gradientColors[2],
-      ],
-    ),
-    OnboardingPage(
-      icon: Icons.auto_awesome_outlined,
-      title: 'onboarding_features',
-      description: 'onboarding_features_desc',
-      gradient: [
-        InstagramColors.gradientColors[2],
-        InstagramColors.gradientColors[4],
-      ],
-    ),
-    OnboardingPage(
-      icon: Icons.security_outlined,
-      title: 'onboarding_privacy',
-      description: 'onboarding_privacy_desc',
-      gradient: [
-        InstagramColors.gradientColors[4],
-        InstagramColors.gradientColors[6],
-      ],
-    ),
-    OnboardingPage(
-      icon: Icons.info_outline,
-      title: 'onboarding_security',
-      description: 'onboarding_security_desc',
-      gradient: [
-        InstagramColors.gradientColors[6],
-        InstagramColors.gradientColors[8],
-      ],
-      isRiskPage: true,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Theme.of(context) çağrısını initState'den kaldırdık
+  }
 
-  void _skipToRiskPage() {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
+    // Pages'i build metodunda oluşturuyoruz
+    final pages = [
+      OnboardingPage(
+        icon: Icons.waving_hand_outlined,
+        title: 'onboarding_welcome',
+        description: 'onboarding_welcome_desc',
+        gradient: [
+          gradientColors[0],
+          gradientColors[2],
+        ],
+      ),
+      OnboardingPage(
+        icon: Icons.auto_awesome_outlined,
+        title: 'onboarding_features',
+        description: 'onboarding_features_desc',
+        gradient: [
+          gradientColors[2],
+          gradientColors[4],
+        ],
+      ),
+      OnboardingPage(
+        icon: Icons.security_outlined,
+        title: 'onboarding_privacy',
+        description: 'onboarding_privacy_desc',
+        gradient: [
+          gradientColors[4],
+          gradientColors[6],
+        ],
+      ),
+      OnboardingPage(
+        icon: Icons.info_outline,
+        title: 'onboarding_security',
+        description: 'onboarding_security_desc',
+        gradient: [
+          gradientColors[6],
+          gradientColors[8],
+        ],
+        isRiskPage: true,
+      ),
+    ];
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: pages[_currentPage].gradient,
+              ),
+            ),
+          ),
+
+          // Dark theme overlay for better contrast
+          if (isDark)
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.3),
+                    Colors.black.withValues(alpha: 0.1),
+                  ],
+                ),
+              ),
+            ),
+
+          // Content
+          SafeArea(
+            child: Column(
+              children: [
+                // Skip button - sadece son sayfa değilse göster
+                if (_currentPage < pages.length - 1)
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: TextButton(
+                            onPressed: () => _skipToRiskPage(pages),
+                            child: Text(
+                              'onboarding_skip'.tr(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Page view
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentPage = index;
+                        if (index < pages.length - 1) {
+                          _riskAccepted = false;
+                        }
+                        // Sayfalar değiştiğinde gradientleri güncelle
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          // Artık _initializePages'e gerek yok
+                        });
+                      });
+                    },
+                    itemCount: pages.length,
+                    itemBuilder: (context, index) {
+                      return _buildPage(pages[index]);
+                    },
+                  ),
+                ),
+
+                // Bottom controls
+                Padding(
+                  padding: const EdgeInsets.all(30),
+                  child: Column(
+                    children: [
+                      // Page indicators
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          pages.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentPage == index ? 30 : 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: _currentPage == index
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(5),
+                              boxShadow: _currentPage == index
+                                  ? [
+                                      BoxShadow(
+                                        color:
+                                            Colors.white.withValues(alpha: 0.5),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // Navigation buttons
+                      Row(
+                        children: [
+                          if (_currentPage > 0)
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: OutlinedButton(
+                                  onPressed: () => _previousPage(),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: const BorderSide(
+                                        color: Colors.white, width: 2),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                  ),
+                                  child: Text(
+                                    'previous'.tr(),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (_currentPage > 0) const SizedBox(width: 15),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(15),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: ElevatedButton(
+                                onPressed: _currentPage == pages.length - 1 &&
+                                        !_riskAccepted
+                                    ? null
+                                    : () => _nextPage(pages),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor:
+                                      pages[_currentPage].gradient.first,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  _currentPage == pages.length - 1
+                                      ? 'onboarding_continue'.tr()
+                                      : 'next'.tr(),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _skipToRiskPage(List<OnboardingPage> pages) {
     _pageController.animateToPage(
-      _pages.length - 1, // Son sayfaya (risk kabul sayfası) git
+      pages.length - 1, // Son sayfaya (risk kabul sayfası) git
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
     );
   }
 
-  void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
+  void _nextPage(List<OnboardingPage> pages) {
+    if (_currentPage < pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -95,162 +327,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: _pages[_currentPage].gradient,
-              ),
-            ),
-          ),
-
-          // Content
-          SafeArea(
-            child: Column(
-              children: [
-                // Skip button - sadece son sayfa değilse göster
-                if (_currentPage < _pages.length - 1)
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => _skipToRiskPage(),
-                          child: Text(
-                            'onboarding_skip'.tr(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                // Page view
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentPage = index;
-                        if (index < _pages.length - 1) {
-                          _riskAccepted = false;
-                        }
-                      });
-                    },
-                    itemCount: _pages.length,
-                    itemBuilder: (context, index) {
-                      return _buildPage(_pages[index]);
-                    },
-                  ),
-                ),
-
-                // Bottom controls
-                Padding(
-                  padding: const EdgeInsets.all(30),
-                  child: Column(
-                    children: [
-                      // Page indicators
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          _pages.length,
-                          (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: _currentPage == index ? 30 : 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: _currentPage == index
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // Navigation buttons
-                      Row(
-                        children: [
-                          if (_currentPage > 0)
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: _previousPage,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  side: const BorderSide(
-                                      color: Colors.white, width: 2),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                ),
-                                child: Text(
-                                  'previous'.tr(),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          if (_currentPage > 0) const SizedBox(width: 15),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _currentPage == _pages.length - 1 &&
-                                      !_riskAccepted
-                                  ? null
-                                  : _nextPage,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor:
-                                    _pages[_currentPage].gradient.first,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                _currentPage == _pages.length - 1
-                                    ? 'onboarding_continue'.tr()
-                                    : 'next'.tr(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPage(OnboardingPage page) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 30),
@@ -267,6 +343,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 color: Colors.white.withValues(alpha: 0.3),
                 width: 2,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Icon(
               page.icon,
@@ -285,6 +368,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               fontWeight: FontWeight.bold,
               color: Colors.white,
               height: 1.2,
+              shadows: [
+                Shadow(
+                  color: Colors.black26,
+                  offset: Offset(0, 2),
+                  blurRadius: 4,
+                ),
+              ],
             ),
             textAlign: TextAlign.center,
           ),
@@ -298,6 +388,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               fontSize: 16,
               color: Colors.white.withValues(alpha: 0.9),
               height: 1.5,
+              shadows: const [
+                Shadow(
+                  color: Colors.black26,
+                  offset: Offset(0, 1),
+                  blurRadius: 2,
+                ),
+              ],
             ),
             textAlign: TextAlign.center,
           ),
@@ -308,11 +405,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.3),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,41 +472,55 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         _riskAccepted = !_riskAccepted;
                       });
                     },
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: _riskAccepted
-                                ? Colors.white
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 2,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: _riskAccepted
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2,
+                              ),
+                              boxShadow: _riskAccepted
+                                  ? [
+                                      BoxShadow(
+                                        color:
+                                            Colors.white.withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: _riskAccepted
+                                ? Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color: page.gradient.first,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'onboarding_checkbox'.tr(),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                          child: _riskAccepted
-                              ? Icon(
-                                  Icons.check,
-                                  size: 18,
-                                  color: page.gradient.first,
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'onboarding_checkbox'.tr(),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],

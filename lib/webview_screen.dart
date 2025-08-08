@@ -5,6 +5,7 @@ import 'mixins/webview_handlers_mixin.dart';
 import 'widgets/instagram_header.dart';
 import 'widgets/slide_panel.dart';
 import 'widgets/edge_indicator.dart';
+import 'utils/dark_theme_colors.dart';
 
 class WebViewScreen extends StatefulWidget {
   final VoidCallback? onAnalysisCompleted;
@@ -38,7 +39,11 @@ class _WebViewScreenState extends State<WebViewScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor:
+          isDark ? DarkThemeColors.primaryBackground : Colors.white,
       body: Stack(
         children: [
           Column(
@@ -47,7 +52,31 @@ class _WebViewScreenState extends State<WebViewScreen>
                 headerAnimation: headerAnimation,
                 isLoggedIn: isLoggedIn,
               ),
-              Expanded(child: WebViewWidget(controller: controller)),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? DarkThemeColors.secondaryBackground
+                        : Colors.white,
+                    boxShadow: isDark
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, -2),
+                            ),
+                          ]
+                        : [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, -2),
+                            ),
+                          ],
+                  ),
+                  child: WebViewWidget(controller: controller),
+                ),
+              ),
             ],
           ),
           EdgeIndicator(
@@ -64,7 +93,11 @@ class _WebViewScreenState extends State<WebViewScreen>
           if (isPanelOpen)
             GestureDetector(
               onTap: closePanel,
-              child: Container(color: Colors.black.withValues(alpha: 0.4)),
+              child: Container(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.6)
+                    : Colors.black.withValues(alpha: 0.4),
+              ),
             ),
           if (isPanelOpen)
             Positioned(

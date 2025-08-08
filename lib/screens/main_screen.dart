@@ -4,6 +4,8 @@ import 'home_screen.dart';
 import 'security_screen.dart';
 import 'settings_screen.dart';
 import '../webview_screen.dart';
+import '../utils/dark_theme_colors.dart';
+import '../utils/instagram_colors.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -25,6 +27,11 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -45,40 +52,99 @@ class _MainScreenState extends State<MainScreen> {
           const SettingsScreen(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        selectedItemColor: const Color(0xFF833ab4),
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
-        items: [
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.home_outlined),
-            activeIcon: const Icon(Icons.home),
-            label: 'home_tab'.tr(),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.analytics_outlined),
-            activeIcon: const Icon(Icons.analytics),
-            label: 'analysis_tab'.tr(),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.security_outlined),
-            activeIcon: const Icon(Icons.security),
-            label: 'security_tab'.tr(),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.settings_outlined),
-            activeIcon: const Icon(Icons.settings),
-            label: 'settings_tab'.tr(),
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.grey.withValues(alpha: 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          selectedItemColor: gradientColors[3],
+          unselectedItemColor:
+              isDark ? DarkThemeColors.secondaryText : Colors.grey,
+          backgroundColor:
+              isDark ? DarkThemeColors.secondaryBackground : Colors.white,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          elevation: 0,
+          items: [
+            BottomNavigationBarItem(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: _currentIndex == 0
+                    ? BoxDecoration(
+                        color: gradientColors[3].withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      )
+                    : null,
+                child: Icon(
+                  _currentIndex == 0 ? Icons.home : Icons.home_outlined,
+                ),
+              ),
+              label: 'home_tab'.tr(),
+            ),
+            BottomNavigationBarItem(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: _currentIndex == 1
+                    ? BoxDecoration(
+                        color: gradientColors[3].withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      )
+                    : null,
+                child: Icon(
+                  _currentIndex == 1
+                      ? Icons.analytics
+                      : Icons.analytics_outlined,
+                ),
+              ),
+              label: 'analysis_tab'.tr(),
+            ),
+            BottomNavigationBarItem(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: _currentIndex == 2
+                    ? BoxDecoration(
+                        color: gradientColors[3].withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      )
+                    : null,
+                child: Icon(
+                  _currentIndex == 2 ? Icons.security : Icons.security_outlined,
+                ),
+              ),
+              label: 'security_tab'.tr(),
+            ),
+            BottomNavigationBarItem(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: _currentIndex == 3
+                    ? BoxDecoration(
+                        color: gradientColors[3].withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      )
+                    : null,
+                child: Icon(
+                  _currentIndex == 3 ? Icons.settings : Icons.settings_outlined,
+                ),
+              ),
+              label: 'settings_tab'.tr(),
+            ),
+          ],
+        ),
       ),
     );
   }

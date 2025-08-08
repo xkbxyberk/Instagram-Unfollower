@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../language_selector.dart';
 import '../utils/instagram_colors.dart';
+import '../utils/dark_theme_colors.dart';
 
 class InstagramHeader extends StatelessWidget {
   final Animation<double> headerAnimation;
@@ -15,6 +16,11 @@ class InstagramHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
     return AnimatedBuilder(
       animation: headerAnimation,
       builder: (context, child) {
@@ -24,16 +30,16 @@ class InstagramHeader extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                InstagramColors.gradientColors[0].withValues(
+                gradientColors[0].withValues(
                   alpha: 0.8 + (0.2 * headerAnimation.value),
                 ),
-                InstagramColors.gradientColors[2].withValues(
+                gradientColors[2].withValues(
                   alpha: 0.8 + (0.2 * headerAnimation.value),
                 ),
-                InstagramColors.gradientColors[4].withValues(
+                gradientColors[4].withValues(
                   alpha: 0.8 + (0.2 * headerAnimation.value),
                 ),
-                InstagramColors.gradientColors[6].withValues(
+                gradientColors[6].withValues(
                   alpha: 0.8 + (0.2 * headerAnimation.value),
                 ),
               ],
@@ -46,7 +52,7 @@ class InstagramHeader extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: InstagramColors.gradientColors[3].withValues(alpha: 0.3),
+                color: gradientColors[3].withValues(alpha: 0.3),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -85,6 +91,25 @@ class InstagramHeader extends StatelessWidget {
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          // Logo yüklenemezse fallback icon
+                          return Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  gradientColors[0],
+                                  gradientColors[2],
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -103,7 +128,7 @@ class InstagramHeader extends StatelessWidget {
                           ).createShader(bounds),
                           child: Text(
                             'app_name'.tr(),
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -120,7 +145,7 @@ class InstagramHeader extends StatelessWidget {
                           ).createShader(bounds),
                           child: Text(
                             'app_subtitle'.tr(),
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
                               color: Colors.white,
@@ -131,7 +156,7 @@ class InstagramHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  LanguageSelector(),
+                  const LanguageSelector(),
                   const SizedBox(width: 10),
                   if (isLoggedIn)
                     AnimatedOpacity(
@@ -143,9 +168,14 @@ class InstagramHeader extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.2),
+                          color: isDark
+                              ? DarkThemeColors.connectedColor
+                                  .withValues(alpha: 0.2)
+                              : Colors.green.withValues(alpha: 0.2),
                           border: Border.all(
-                            color: Colors.green.shade300,
+                            color: isDark
+                                ? DarkThemeColors.connectedColor
+                                : Colors.green.shade300,
                             width: 1,
                           ),
                           borderRadius: BorderRadius.circular(20),
@@ -156,15 +186,17 @@ class InstagramHeader extends StatelessWidget {
                             Container(
                               width: 8,
                               height: 8,
-                              decoration: const BoxDecoration(
-                                color: Colors.green,
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? DarkThemeColors.connectedColor
+                                    : Colors.green,
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 6),
                             Text(
                               'connected'.tr(),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,

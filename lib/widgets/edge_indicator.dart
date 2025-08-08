@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/instagram_colors.dart';
+import '../utils/dark_theme_colors.dart';
 
 class EdgeIndicator extends StatelessWidget {
   final bool isLoggedIn;
@@ -29,6 +30,11 @@ class EdgeIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isLoggedIn || isPanelOpen) return const SizedBox();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
     return Positioned(
       right: 0,
       top: MediaQuery.of(context).size.height * 0.4,
@@ -54,14 +60,13 @@ class EdgeIndicator extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
+                        color: (isDark ? Colors.black : Colors.black)
+                            .withValues(alpha: isDark ? 0.4 : 0.2),
                         blurRadius: 15,
                         offset: const Offset(-5, 0),
                       ),
                       BoxShadow(
-                        color: (hasResults
-                                ? Colors.green
-                                : InstagramColors.gradientColors[3])
+                        color: (hasResults ? Colors.green : gradientColors[3])
                             .withValues(alpha: 0.4 * glowAnimation.value),
                         blurRadius: 25 + (15 * glowAnimation.value),
                         offset: const Offset(-10, 0),
@@ -90,13 +95,13 @@ class EdgeIndicator extends StatelessWidget {
                                   ),
                                 ]
                               : [
-                                  InstagramColors.gradientColors[0].withValues(
+                                  gradientColors[0].withValues(
                                     alpha: 0.85 + (0.15 * glowAnimation.value),
                                   ),
-                                  InstagramColors.gradientColors[2].withValues(
+                                  gradientColors[2].withValues(
                                     alpha: 0.85 + (0.15 * glowAnimation.value),
                                   ),
-                                  InstagramColors.gradientColors[4].withValues(
+                                  gradientColors[4].withValues(
                                     alpha: 0.85 + (0.15 * glowAnimation.value),
                                   ),
                                 ],
@@ -156,7 +161,9 @@ class EdgeIndicator extends StatelessWidget {
                               child: Text(
                                 '$unfollowersCount',
                                 style: TextStyle(
-                                  color: Colors.green.shade700,
+                                  color: hasResults
+                                      ? Colors.green.shade700
+                                      : gradientColors[3],
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),

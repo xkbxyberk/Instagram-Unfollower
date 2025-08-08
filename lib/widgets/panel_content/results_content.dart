@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../utils/instagram_colors.dart';
+import '../../utils/dark_theme_colors.dart';
 
 enum SortOption { none, az, za }
 
@@ -83,21 +83,17 @@ class _ResultsContentState extends State<ResultsContent>
       setState(() {
         _searchQuery = _searchController.text.toLowerCase().trim();
       });
-      // State'i kaydet
       widget.onUpdatePanelState(null, _searchQuery, null, null);
     });
 
     _tabController.addListener(() {
-      // Tab değişikliğini kaydet
       widget.onUpdatePanelState(_tabController.index, null, null, null);
     });
 
     _scrollController.addListener(() {
-      // Scroll position'ı kaydet
       widget.onUpdatePanelState(null, null, null, _scrollController.offset);
     });
 
-    // Scroll position'ı restore et
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.initialScrollPosition > 0 && _scrollController.hasClients) {
         _scrollController.jumpTo(widget.initialScrollPosition);
@@ -117,7 +113,6 @@ class _ResultsContentState extends State<ResultsContent>
       List<Map<String, dynamic>> originalList) {
     List<Map<String, dynamic>> filteredList = originalList;
 
-    // Search filter
     if (_searchQuery.isNotEmpty) {
       filteredList = originalList.where((user) {
         final username = (user['username'] as String).toLowerCase();
@@ -125,7 +120,6 @@ class _ResultsContentState extends State<ResultsContent>
       }).toList();
     }
 
-    // Sort
     switch (_sortOption) {
       case SortOption.az:
         filteredList.sort((a, b) => (a['username'] as String)
@@ -138,41 +132,35 @@ class _ResultsContentState extends State<ResultsContent>
             .compareTo((a['username'] as String).toLowerCase()));
         break;
       case SortOption.none:
-        // Keep original order
         break;
     }
 
     return filteredList;
   }
 
-  // Instagram uygulamasında profil aç
   Future<void> _openInInstagramApp(String username) async {
     final instagramAppUrl = 'instagram://user?username=$username';
     final instagramWebUrl = 'https://www.instagram.com/$username/';
 
     try {
-      // Önce Instagram uygulamasını açmayı dene
       if (await canLaunchUrl(Uri.parse(instagramAppUrl))) {
         await launchUrl(
           Uri.parse(instagramAppUrl),
           mode: LaunchMode.externalApplication,
         );
       } else {
-        // Uygulama yüklü değilse web sitesini aç
         await launchUrl(
           Uri.parse(instagramWebUrl),
           mode: LaunchMode.externalApplication,
         );
       }
     } catch (e) {
-      // Hata durumunda fallback olarak web sitesini aç
       try {
         await launchUrl(
           Uri.parse(instagramWebUrl),
           mode: LaunchMode.externalApplication,
         );
       } catch (e) {
-        // Son çare olarak mevcut webview'de aç
         widget.onOpenUserProfile(username);
       }
     }
@@ -180,48 +168,50 @@ class _ResultsContentState extends State<ResultsContent>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
-        // Header with stats
-        _buildHeaderStats(),
-
-        // Tab bar
-        _buildTabBar(),
-
-        // Search and Sort controls
-        _buildSearchAndSort(),
-
-        // Content
+        _buildHeaderStats(isDark),
+        _buildTabBar(isDark),
+        _buildSearchAndSort(isDark),
         Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
               _buildUserList(
-                  _getFilteredAndSortedList(widget.unfollowers), false),
-              _buildUserList(_getFilteredAndSortedList(widget.fans), true),
+                  _getFilteredAndSortedList(widget.unfollowers), false, isDark),
+              _buildUserList(
+                  _getFilteredAndSortedList(widget.fans), true, isDark),
             ],
           ),
         ),
-
-        // Bottom actions
-        _buildBottomActions(),
+        _buildBottomActions(isDark),
       ],
     );
   }
 
-  Widget _buildHeaderStats() {
+  Widget _buildHeaderStats(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       margin: const EdgeInsets.fromLTRB(20, 15, 20, 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Colors.blue.shade50,
-            Colors.purple.shade50,
-          ],
+          colors: isDark
+              ? [
+                  Colors.blue.shade900.withValues(alpha: 0.3),
+                  Colors.purple.shade900.withValues(alpha: 0.3),
+                ]
+              : [
+                  Colors.blue.shade50,
+                  Colors.purple.shade50,
+                ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blue.shade200, width: 1),
+        border: Border.all(
+          color: Colors.blue.shade200.withValues(alpha: isDark ? 0.3 : 1.0),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.blue.withValues(alpha: 0.1),
@@ -236,10 +226,7 @@ class _ResultsContentState extends State<ResultsContent>
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  InstagramColors.gradientColors[0],
-                  InstagramColors.gradientColors[2],
-                ],
+                colors: ThemeColors.instagramGradient(context).take(2).toList(),
               ),
               shape: BoxShape.circle,
             ),
@@ -257,10 +244,10 @@ class _ResultsContentState extends State<ResultsContent>
               children: [
                 Text(
                   'analysis_completed'.tr(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: ThemeColors.primaryText(context),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -268,7 +255,7 @@ class _ResultsContentState extends State<ResultsContent>
                   '${widget.unfollowers.length + widget.fans.length} sonuç',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: ThemeColors.secondaryText(context),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -280,23 +267,25 @@ class _ResultsContentState extends State<ResultsContent>
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(bool isDark) {
+    final gradientColors = ThemeColors.instagramGradient(context);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: ThemeColors.surface(context),
         borderRadius: BorderRadius.circular(12),
       ),
       child: TabBar(
         controller: _tabController,
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.grey.shade600,
+        unselectedLabelColor: ThemeColors.secondaryText(context),
         indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              InstagramColors.gradientColors[0],
-              InstagramColors.gradientColors[2],
+              gradientColors[0],
+              gradientColors[2],
             ],
           ),
           borderRadius: BorderRadius.circular(12),
@@ -358,41 +347,42 @@ class _ResultsContentState extends State<ResultsContent>
     );
   }
 
-  Widget _buildSearchAndSort() {
+  Widget _buildSearchAndSort(bool isDark) {
+    final gradientColors = ThemeColors.instagramGradient(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: Row(
         children: [
-          // Search field
           Expanded(
             child: Container(
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: ThemeColors.card(context),
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: ThemeColors.cardShadow(context),
               ),
               child: TextField(
                 controller: _searchController,
+                style: TextStyle(color: ThemeColors.primaryText(context)),
                 decoration: InputDecoration(
                   hintText: 'search_user'.tr(),
-                  hintStyle:
-                      TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                  prefixIcon:
-                      Icon(Icons.search, color: Colors.grey.shade400, size: 20),
+                  hintStyle: TextStyle(
+                    color: ThemeColors.secondaryText(context),
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: ThemeColors.secondaryText(context),
+                    size: 20,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: ThemeColors.card(context),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 10,
@@ -401,18 +391,15 @@ class _ResultsContentState extends State<ResultsContent>
               ),
             ),
           ),
-
           const SizedBox(width: 10),
-
-          // Sort button
           Container(
             height: 44,
             width: 44,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  InstagramColors.gradientColors[0],
-                  InstagramColors.gradientColors[2],
+                  gradientColors[0],
+                  gradientColors[2],
                 ],
               ),
               borderRadius: BorderRadius.circular(10),
@@ -422,7 +409,6 @@ class _ResultsContentState extends State<ResultsContent>
                 setState(() {
                   _sortOption = option;
                 });
-                // Sort state'ini kaydet
                 String sortValue = 'none';
                 switch (option) {
                   case SortOption.az:
@@ -438,6 +424,7 @@ class _ResultsContentState extends State<ResultsContent>
                 widget.onUpdatePanelState(null, null, sortValue, null);
               },
               icon: const Icon(Icons.sort, color: Colors.white, size: 20),
+              color: ThemeColors.card(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -447,9 +434,13 @@ class _ResultsContentState extends State<ResultsContent>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.clear, size: 16, color: Colors.grey.shade600),
+                      Icon(Icons.clear,
+                          size: 16, color: ThemeColors.secondaryText(context)),
                       const SizedBox(width: 8),
-                      const Text('Varsayılan', style: TextStyle(fontSize: 14)),
+                      Text('Varsayılan',
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: ThemeColors.primaryText(context))),
                     ],
                   ),
                 ),
@@ -459,10 +450,12 @@ class _ResultsContentState extends State<ResultsContent>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.sort_by_alpha,
-                          size: 16, color: Colors.grey.shade600),
+                          size: 16, color: ThemeColors.secondaryText(context)),
                       const SizedBox(width: 8),
                       Text('sort_az'.tr(),
-                          style: const TextStyle(fontSize: 14)),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: ThemeColors.primaryText(context))),
                     ],
                   ),
                 ),
@@ -472,10 +465,12 @@ class _ResultsContentState extends State<ResultsContent>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.sort_by_alpha,
-                          size: 16, color: Colors.grey.shade600),
+                          size: 16, color: ThemeColors.secondaryText(context)),
                       const SizedBox(width: 8),
                       Text('sort_za'.tr(),
-                          style: const TextStyle(fontSize: 14)),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: ThemeColors.primaryText(context))),
                     ],
                   ),
                 ),
@@ -487,7 +482,8 @@ class _ResultsContentState extends State<ResultsContent>
     );
   }
 
-  Widget _buildUserList(List<Map<String, dynamic>> users, bool isFansTab) {
+  Widget _buildUserList(
+      List<Map<String, dynamic>> users, bool isFansTab, bool isDark) {
     if (users.isEmpty) {
       return Center(
         child: Column(
@@ -496,7 +492,7 @@ class _ResultsContentState extends State<ResultsContent>
             Icon(
               isFansTab ? Icons.favorite_outline : Icons.person_remove_outlined,
               size: 64,
-              color: Colors.grey.shade400,
+              color: ThemeColors.secondaryText(context),
             ),
             const SizedBox(height: 16),
             Text(
@@ -507,7 +503,7 @@ class _ResultsContentState extends State<ResultsContent>
                       : 'Henüz takipten çıkan bulunmuyor'),
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade600,
+                color: ThemeColors.secondaryText(context),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -516,19 +512,17 @@ class _ResultsContentState extends State<ResultsContent>
       );
     }
 
+    final gradientColors = ThemeColors.instagramGradient(context);
+
     return Column(
       children: [
-        // Select all bar
         if (users.isNotEmpty)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  InstagramColors.gradientColors[0],
-                  InstagramColors.gradientColors[2]
-                ],
+                colors: [gradientColors[0], gradientColors[2]],
               ),
               borderRadius: BorderRadius.circular(14),
             ),
@@ -590,8 +584,6 @@ class _ResultsContentState extends State<ResultsContent>
               ],
             ),
           ),
-
-        // User list
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
@@ -607,22 +599,14 @@ class _ResultsContentState extends State<ResultsContent>
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? InstagramColors.gradientColors[0].withValues(alpha: 0.1)
-                      : Colors.white,
+                      ? gradientColors[0].withValues(alpha: 0.1)
+                      : ThemeColors.card(context),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isSelected
-                        ? InstagramColors.gradientColors[0]
-                        : Colors.transparent,
+                    color: isSelected ? gradientColors[0] : Colors.transparent,
                     width: 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+                  boxShadow: ThemeColors.cardShadow(context),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(
@@ -633,7 +617,6 @@ class _ResultsContentState extends State<ResultsContent>
                     onTap: () => widget.onToggleUserSelection(username),
                     child: Stack(
                       children: [
-                        // Profile picture
                         Container(
                           width: 40,
                           height: 40,
@@ -641,8 +624,8 @@ class _ResultsContentState extends State<ResultsContent>
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: isSelected
-                                  ? InstagramColors.gradientColors[0]
-                                  : Colors.grey.shade300,
+                                  ? gradientColors[0]
+                                  : ThemeColors.border(context),
                               width: 2,
                             ),
                           ),
@@ -661,7 +644,6 @@ class _ResultsContentState extends State<ResultsContent>
                                 : _buildDefaultAvatar(username, isFansTab),
                           ),
                         ),
-                        // Selection indicator
                         if (isSelected)
                           Positioned(
                             right: 0,
@@ -670,7 +652,7 @@ class _ResultsContentState extends State<ResultsContent>
                               width: 14,
                               height: 14,
                               decoration: BoxDecoration(
-                                color: InstagramColors.gradientColors[0],
+                                color: gradientColors[0],
                                 shape: BoxShape.circle,
                                 border:
                                     Border.all(color: Colors.white, width: 1.5),
@@ -691,8 +673,8 @@ class _ResultsContentState extends State<ResultsContent>
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                       color: isSelected
-                          ? InstagramColors.gradientColors[3]
-                          : Colors.black87,
+                          ? gradientColors[3]
+                          : ThemeColors.primaryText(context),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -706,11 +688,9 @@ class _ResultsContentState extends State<ResultsContent>
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  // ✅ YENİ: İki buton yan yana
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Web'de aç butonu
                       Container(
                         width: 32,
                         height: 32,
@@ -735,15 +715,14 @@ class _ResultsContentState extends State<ResultsContent>
                         ),
                       ),
                       const SizedBox(width: 6),
-                      // Instagram uygulamasında aç butonu
                       Container(
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              InstagramColors.gradientColors[2],
-                              InstagramColors.gradientColors[4],
+                              gradientColors[2],
+                              gradientColors[4],
                             ],
                           ),
                           borderRadius: BorderRadius.circular(10),
@@ -807,7 +786,7 @@ class _ResultsContentState extends State<ResultsContent>
         .length;
   }
 
-  Widget _buildBottomActions() {
+  Widget _buildBottomActions(bool isDark) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Container(

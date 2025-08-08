@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../utils/instagram_colors.dart';
+import '../utils/dark_theme_colors.dart';
 
 class SecurityScreen extends StatelessWidget {
   const SecurityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              InstagramColors.gradientColors[0].withValues(alpha: 0.05),
-              Colors.white,
-            ],
+            colors: isDark
+                ? [
+                    DarkThemeColors.gradientColors[0].withValues(alpha: 0.1),
+                    DarkThemeColors.primaryBackground,
+                  ]
+                : [
+                    InstagramColors.gradientColors[0].withValues(alpha: 0.05),
+                    Colors.white,
+                  ],
           ),
         ),
         child: SafeArea(
@@ -28,27 +36,29 @@ class SecurityScreen extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // Header
-                _buildHeader(),
+                _buildHeader(context, isDark),
 
                 const SizedBox(height: 30),
 
                 // How It Works Section
                 _buildSection(
+                  context: context,
                   icon: Icons.info_outline,
                   title: 'how_it_works'.tr(),
                   description: 'how_it_works_desc'.tr(),
                   color: Colors.blue,
+                  isDark: isDark,
                 ),
 
                 const SizedBox(height: 20),
 
                 // Safety Tips Section
-                _buildTipsSection(),
+                _buildTipsSection(context, isDark),
 
                 const SizedBox(height: 20),
 
                 // Privacy Section
-                _buildPrivacySection(),
+                _buildPrivacySection(context, isDark),
 
                 const SizedBox(height: 20),
               ],
@@ -59,7 +69,11 @@ class SecurityScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context, bool isDark) {
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -70,8 +84,8 @@ class SecurityScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    InstagramColors.gradientColors[0],
-                    InstagramColors.gradientColors[2],
+                    gradientColors[0],
+                    gradientColors[2],
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -89,10 +103,10 @@ class SecurityScreen extends StatelessWidget {
                 children: [
                   Text(
                     'security_guide_title'.tr(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: _getPrimaryTextColor(context, isDark),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -100,7 +114,7 @@ class SecurityScreen extends StatelessWidget {
                     'security_guide_subtitle'.tr(),
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: _getSecondaryTextColor(context, isDark),
                     ),
                   ),
                 ],
@@ -113,23 +127,19 @@ class SecurityScreen extends StatelessWidget {
   }
 
   Widget _buildSection({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String description,
     required Color color,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _getCardColor(context, isDark),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: _getCardShadow(context, isDark),
         border: Border.all(
           color: color.withValues(alpha: 0.1),
           width: 1,
@@ -152,10 +162,10 @@ class SecurityScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: _getPrimaryTextColor(context, isDark),
                   ),
                 ),
               ),
@@ -166,7 +176,7 @@ class SecurityScreen extends StatelessWidget {
             description,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: _getSecondaryTextColor(context, isDark),
               height: 1.5,
             ),
           ),
@@ -175,19 +185,13 @@ class SecurityScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTipsSection() {
+  Widget _buildTipsSection(BuildContext context, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _getCardColor(context, isDark),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: _getCardShadow(context, isDark),
         border: Border.all(
           color: Colors.orange.withValues(alpha: 0.1),
           width: 1,
@@ -211,10 +215,10 @@ class SecurityScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   'safety_tips'.tr(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: _getPrimaryTextColor(context, isDark),
                   ),
                 ),
               ),
@@ -225,17 +229,17 @@ class SecurityScreen extends StatelessWidget {
             'safety_tips_desc'.tr(),
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: _getSecondaryTextColor(context, isDark),
             ),
           ),
           const SizedBox(height: 15),
-          ..._buildTipsList(),
+          ..._buildTipsList(context, isDark),
         ],
       ),
     );
   }
 
-  List<Widget> _buildTipsList() {
+  List<Widget> _buildTipsList(BuildContext context, bool isDark) {
     final tips = [
       'tip_1'.tr(),
       'tip_2'.tr(),
@@ -263,7 +267,7 @@ class SecurityScreen extends StatelessWidget {
                       tip,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade700,
+                        color: _getSecondaryTextColor(context, isDark),
                         height: 1.4,
                       ),
                     ),
@@ -274,19 +278,13 @@ class SecurityScreen extends StatelessWidget {
         .toList();
   }
 
-  Widget _buildPrivacySection() {
+  Widget _buildPrivacySection(BuildContext context, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _getCardColor(context, isDark),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: _getCardShadow(context, isDark),
         border: Border.all(
           color: Colors.green.withValues(alpha: 0.1),
           width: 1,
@@ -310,10 +308,10 @@ class SecurityScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   'data_privacy'.tr(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: _getPrimaryTextColor(context, isDark),
                   ),
                 ),
               ),
@@ -324,17 +322,17 @@ class SecurityScreen extends StatelessWidget {
             'data_privacy_desc'.tr(),
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: _getSecondaryTextColor(context, isDark),
             ),
           ),
           const SizedBox(height: 15),
-          ..._buildPrivacyList(),
+          ..._buildPrivacyList(context, isDark),
         ],
       ),
     );
   }
 
-  List<Widget> _buildPrivacyList() {
+  List<Widget> _buildPrivacyList(BuildContext context, bool isDark) {
     final privacyPoints = [
       'privacy_1'.tr(),
       'privacy_2'.tr(),
@@ -359,7 +357,7 @@ class SecurityScreen extends StatelessWidget {
                       point,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade700,
+                        color: _getSecondaryTextColor(context, isDark),
                         height: 1.4,
                       ),
                     ),
@@ -368,5 +366,30 @@ class SecurityScreen extends StatelessWidget {
               ),
             ))
         .toList();
+  }
+
+  // Helper methods for theme colors
+  Color _getPrimaryTextColor(BuildContext context, bool isDark) {
+    return isDark ? DarkThemeColors.primaryText : Colors.black87;
+  }
+
+  Color _getSecondaryTextColor(BuildContext context, bool isDark) {
+    return isDark ? DarkThemeColors.secondaryText : Colors.grey.shade600;
+  }
+
+  Color _getCardColor(BuildContext context, bool isDark) {
+    return isDark ? DarkThemeColors.cardColor : Colors.white;
+  }
+
+  List<BoxShadow> _getCardShadow(BuildContext context, bool isDark) {
+    return isDark
+        ? DarkThemeColors.cardShadow
+        : [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ];
   }
 }

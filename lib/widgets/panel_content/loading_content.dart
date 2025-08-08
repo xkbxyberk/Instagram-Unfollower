@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../utils/instagram_colors.dart';
+import '../../utils/dark_theme_colors.dart';
 
 class LoadingContent extends StatelessWidget {
   final String progressMessage;
@@ -12,6 +13,11 @@ class LoadingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
     return Padding(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -26,8 +32,8 @@ class LoadingContent extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      InstagramColors.gradientColors[0].withValues(alpha: 0.1),
-                      InstagramColors.gradientColors[4].withValues(alpha: 0.1),
+                      gradientColors[0].withValues(alpha: 0.1),
+                      gradientColors[4].withValues(alpha: 0.1),
                     ],
                   ),
                   shape: BoxShape.circle,
@@ -39,33 +45,25 @@ class LoadingContent extends StatelessWidget {
                 child: CircularProgressIndicator(
                   strokeWidth: 6,
                   valueColor: AlwaysStoppedAnimation(
-                    LinearGradient(
-                      colors: [
-                        InstagramColors.gradientColors[0],
-                        InstagramColors.gradientColors[4]
-                      ],
-                    ).colors.first,
+                    gradientColors[0],
                   ),
                 ),
               ),
               Icon(
                 Icons.analytics_outlined,
                 size: 35,
-                color: InstagramColors.gradientColors[3],
+                color: gradientColors[3],
               ),
             ],
           ),
           const SizedBox(height: 30),
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
-              colors: [
-                InstagramColors.gradientColors[2],
-                InstagramColors.gradientColors[4]
-              ],
+              colors: [gradientColors[2], gradientColors[4]],
             ).createShader(bounds),
             child: Text(
               'analysis_in_progress'.tr(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -77,7 +75,7 @@ class LoadingContent extends StatelessWidget {
             progressMessage,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: _getSecondaryTextColor(context, isDark),
               height: 1.4,
             ),
             textAlign: TextAlign.center,
@@ -87,16 +85,13 @@ class LoadingContent extends StatelessWidget {
             width: double.infinity,
             height: 6,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: _getDividerColor(context, isDark),
               borderRadius: BorderRadius.circular(3),
             ),
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    InstagramColors.gradientColors[0],
-                    InstagramColors.gradientColors[4]
-                  ],
+                  colors: [gradientColors[0], gradientColors[4]],
                 ),
                 borderRadius: BorderRadius.circular(3),
               ),
@@ -105,5 +100,14 @@ class LoadingContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Helper methods for theme colors
+  Color _getSecondaryTextColor(BuildContext context, bool isDark) {
+    return isDark ? DarkThemeColors.secondaryText : Colors.grey.shade600;
+  }
+
+  Color _getDividerColor(BuildContext context, bool isDark) {
+    return isDark ? DarkThemeColors.dividerColor : Colors.grey.shade200;
   }
 }

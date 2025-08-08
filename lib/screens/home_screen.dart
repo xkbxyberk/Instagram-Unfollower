@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../utils/instagram_colors.dart';
+import '../utils/dark_theme_colors.dart';
 import '../models/dashboard_state.dart';
 import '../services/analytics_service.dart';
 import '../widgets/mini_chart.dart';
@@ -46,23 +47,33 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              InstagramColors.gradientColors[0].withValues(alpha: 0.05),
-              InstagramColors.gradientColors[4].withValues(alpha: 0.05),
-              Colors.white,
-            ],
+            colors: isDark
+                ? [
+                    DarkThemeColors.gradientColors[0].withValues(alpha: 0.1),
+                    DarkThemeColors.gradientColors[4].withValues(alpha: 0.1),
+                    DarkThemeColors.primaryBackground,
+                  ]
+                : [
+                    InstagramColors.gradientColors[0].withValues(alpha: 0.05),
+                    InstagramColors.gradientColors[4].withValues(alpha: 0.05),
+                    Colors.white,
+                  ],
             stops: const [0.0, 0.3, 1.0],
           ),
         ),
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: refreshDashboard,
+            color: ThemeColors.instagramGradient(context)[0],
+            backgroundColor: ThemeColors.card(context),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(20),
@@ -72,25 +83,25 @@ class HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 20),
 
                   // Welcome Header
-                  _buildWelcomeHeader(),
+                  _buildWelcomeHeader(isDark),
 
                   const SizedBox(height: 30),
 
                   // Main Stats Row
                   if (_dashboardState.isLoading)
-                    _buildLoadingState()
+                    _buildLoadingState(isDark)
                   else ...[
-                    _buildMainStatsRow(),
+                    _buildMainStatsRow(isDark),
                     const SizedBox(height: 20),
-                    _buildActivitySection(),
+                    _buildActivitySection(isDark),
                     const SizedBox(height: 20),
-                    _buildProgressSection(),
+                    _buildProgressSection(isDark),
                   ],
 
                   // Alert Section
                   if (_dashboardState.currentAlert != null) ...[
                     const SizedBox(height: 20),
-                    _buildAlertCard(_dashboardState.currentAlert!),
+                    _buildAlertCard(_dashboardState.currentAlert!, isDark),
                   ],
 
                   const SizedBox(height: 20),
@@ -103,16 +114,21 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildWelcomeHeader() {
+  Widget _buildWelcomeHeader(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ShaderMask(
           shaderCallback: (bounds) => LinearGradient(
-            colors: [
-              InstagramColors.gradientColors[0],
-              InstagramColors.gradientColors[4],
-            ],
+            colors: isDark
+                ? [
+                    DarkThemeColors.gradientColors[0],
+                    DarkThemeColors.gradientColors[4],
+                  ]
+                : [
+                    InstagramColors.gradientColors[0],
+                    InstagramColors.gradientColors[4],
+                  ],
           ).createShader(bounds),
           child: Text(
             'welcome_back'.tr(),
@@ -129,7 +145,7 @@ class HomeScreenState extends State<HomeScreen> {
           'dashboard_subtitle'.tr(),
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey.shade600,
+            color: ThemeColors.secondaryText(context),
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -137,29 +153,23 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMainStatsRow() {
+  Widget _buildMainStatsRow(bool isDark) {
     return Row(
       children: [
-        Expanded(child: _buildSecurityStatusCard()),
+        Expanded(child: _buildSecurityStatusCard(isDark)),
         const SizedBox(width: 15),
-        Expanded(child: _buildTotalAnalysesCard()),
+        Expanded(child: _buildTotalAnalysesCard(isDark)),
       ],
     );
   }
 
-  Widget _buildActivitySection() {
+  Widget _buildActivitySection(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeColors.card(context),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: ThemeColors.cardShadow(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,10 +195,10 @@ class HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       'weekly_activity'.tr(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: ThemeColors.primaryText(context),
                       ),
                     ),
                     Row(
@@ -197,7 +207,7 @@ class HomeScreenState extends State<HomeScreen> {
                           '${_dashboardState.weeklyAnalyses} ${'this_week'.tr()}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: ThemeColors.secondaryText(context),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -226,17 +236,17 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProgressSection() {
+  Widget _buildProgressSection(bool isDark) {
     return Row(
       children: [
-        Expanded(child: _buildUsageProgressCard()),
+        Expanded(child: _buildUsageProgressCard(isDark)),
         const SizedBox(width: 15),
-        Expanded(child: _buildStreakCard()),
+        Expanded(child: _buildStreakCard(isDark)),
       ],
     );
   }
 
-  Widget _buildUsageProgressCard() {
+  Widget _buildUsageProgressCard(bool isDark) {
     final progress = (_dashboardState.weeklyAnalyses / 10).clamp(0.0, 1.0);
     Color progressColor = Colors.green;
     String progressText = 'progress_safe'.tr();
@@ -252,15 +262,9 @@ class HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeColors.card(context),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: ThemeColors.cardShadow(context),
         border: Border.all(
           color: progressColor.withValues(alpha: 0.1),
           width: 1,
@@ -273,7 +277,7 @@ class HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: ThemeColors.secondaryText(context),
             ),
           ),
           const SizedBox(height: 15),
@@ -287,17 +291,17 @@ class HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   '${_dashboardState.weeklyAnalyses}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: ThemeColors.primaryText(context),
                   ),
                 ),
                 Text(
                   '/10',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: ThemeColors.secondaryText(context),
                   ),
                 ),
               ],
@@ -318,19 +322,13 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStreakCard() {
+  Widget _buildStreakCard(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeColors.card(context),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: ThemeColors.cardShadow(context),
         border: Border.all(
           color: Colors.purple.withValues(alpha: 0.1),
           width: 1,
@@ -356,16 +354,16 @@ class HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: ThemeColors.secondaryText(context),
             ),
           ),
           const SizedBox(height: 5),
           Text(
             'streak_days'.tr(args: [_dashboardState.usageStreak.toString()]),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: ThemeColors.primaryText(context),
             ),
           ),
           const SizedBox(height: 3),
@@ -373,7 +371,7 @@ class HomeScreenState extends State<HomeScreen> {
             _formatLastAnalysisDate(_dashboardState.lastAnalysisDate),
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade500,
+              color: ThemeColors.secondaryText(context),
             ),
           ),
         ],
@@ -381,7 +379,7 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSecurityStatusCard() {
+  Widget _buildSecurityStatusCard(bool isDark) {
     final alert = _dashboardState.currentAlert;
     Color statusColor = Colors.green;
     String statusText = 'security_status_safe'.tr();
@@ -392,31 +390,24 @@ class HomeScreenState extends State<HomeScreen> {
       switch (alert.severity) {
         case AlertSeverity.high:
           statusColor = Colors.red;
-          statusText =
-              alert.getMessage(); // ✅ DÜZELTİLDİ: getMessage() kullanıyoruz
-          statusSubtitle =
-              alert.getSubtitle(); // ✅ DÜZELTİLDİ: getSubtitle() kullanıyoruz
+          statusText = alert.getMessage();
+          statusSubtitle = alert.getSubtitle();
           statusIcon = Icons.warning_rounded;
           break;
         case AlertSeverity.medium:
           statusColor = Colors.orange;
-          statusText =
-              alert.getMessage(); // ✅ DÜZELTİLDİ: getMessage() kullanıyoruz
-          statusSubtitle =
-              alert.getSubtitle(); // ✅ DÜZELTİLDİ: getSubtitle() kullanıyoruz
+          statusText = alert.getMessage();
+          statusSubtitle = alert.getSubtitle();
           statusIcon = Icons.info_outlined;
           break;
         case AlertSeverity.low:
           statusColor = Colors.blue;
-          statusText =
-              alert.getMessage(); // ✅ DÜZELTİLDİ: getMessage() kullanıyoruz
-          statusSubtitle =
-              alert.getSubtitle(); // ✅ DÜZELTİLDİ: getSubtitle() kullanıyoruz
+          statusText = alert.getMessage();
+          statusSubtitle = alert.getSubtitle();
           statusIcon = Icons.access_time_rounded;
           break;
       }
     } else {
-      // Güvenli durum için daha detaylı bilgi
       final weeklyCount = _dashboardState.weeklyAnalyses;
       statusSubtitle =
           'usage_this_week'.tr(args: [weeklyCount.toString(), '10']);
@@ -429,10 +420,15 @@ class HomeScreenState extends State<HomeScreen> {
       color: statusColor,
       context: context,
       subtitle: statusSubtitle,
+      isDark: isDark,
     );
   }
 
-  Widget _buildTotalAnalysesCard() {
+  Widget _buildTotalAnalysesCard(bool isDark) {
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -440,15 +436,15 @@ class HomeScreenState extends State<HomeScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            InstagramColors.gradientColors[0],
-            InstagramColors.gradientColors[2],
-            InstagramColors.gradientColors[4],
+            gradientColors[0],
+            gradientColors[2],
+            gradientColors[4],
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: InstagramColors.gradientColors[3].withValues(alpha: 0.3),
+            color: gradientColors[3].withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -557,19 +553,14 @@ class HomeScreenState extends State<HomeScreen> {
     required Color color,
     required BuildContext context,
     String? subtitle,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeColors.card(context),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: ThemeColors.cardShadow(context),
         border: Border.all(
           color: color.withValues(alpha: 0.1),
           width: 1,
@@ -599,7 +590,7 @@ class HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade600,
+                    color: ThemeColors.secondaryText(context),
                   ),
                 ),
               ),
@@ -621,7 +612,7 @@ class HomeScreenState extends State<HomeScreen> {
               subtitle,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade500,
+                color: ThemeColors.secondaryText(context),
                 height: 1.3,
               ),
             ),
@@ -631,7 +622,7 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAlertCard(SecurityAlert alert) {
+  Widget _buildAlertCard(SecurityAlert alert, bool isDark) {
     Color alertColor = Colors.orange;
     IconData alertIcon = Icons.info_outline;
 
@@ -653,7 +644,7 @@ class HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: alertColor.withValues(alpha: 0.1),
+        color: alertColor.withValues(alpha: isDark ? 0.2 : 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: alertColor.withValues(alpha: 0.3),
@@ -672,10 +663,10 @@ class HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 15),
               Expanded(
                 child: Text(
-                  alert.getMessage(), // ✅ DÜZELTİLDİ: getMessage() kullanıyoruz
+                  alert.getMessage(),
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade800,
+                    color: ThemeColors.primaryText(context),
                     fontWeight: FontWeight.w500,
                     height: 1.4,
                   ),
@@ -688,11 +679,10 @@ class HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 39),
               child: Text(
-                alert
-                    .getSubtitle()!, // ✅ DÜZELTİLDİ: getSubtitle() kullanıyoruz
+                alert.getSubtitle()!,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade600,
+                  color: ThemeColors.secondaryText(context),
                   height: 1.3,
                 ),
               ),
@@ -703,44 +693,38 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildLoadingState(bool isDark) {
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _buildLoadingCard()),
+            Expanded(child: _buildLoadingCard(isDark)),
             const SizedBox(width: 15),
-            Expanded(child: _buildLoadingCard()),
+            Expanded(child: _buildLoadingCard(isDark)),
           ],
         ),
         const SizedBox(height: 20),
-        _buildLoadingCard(height: 140),
+        _buildLoadingCard(isDark, height: 140),
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(child: _buildLoadingCard()),
+            Expanded(child: _buildLoadingCard(isDark)),
             const SizedBox(width: 15),
-            Expanded(child: _buildLoadingCard()),
+            Expanded(child: _buildLoadingCard(isDark)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildLoadingCard({double height = 120}) {
+  Widget _buildLoadingCard(bool isDark, {double height = 120}) {
     return Container(
       height: height,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeColors.card(context),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: ThemeColors.cardShadow(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -749,7 +733,7 @@ class HomeScreenState extends State<HomeScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: ThemeColors.divider(context),
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -758,7 +742,7 @@ class HomeScreenState extends State<HomeScreen> {
             height: 14,
             width: 80,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: ThemeColors.divider(context),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -767,7 +751,7 @@ class HomeScreenState extends State<HomeScreen> {
             height: 16,
             width: 60,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: ThemeColors.border(context),
               borderRadius: BorderRadius.circular(4),
             ),
           ),

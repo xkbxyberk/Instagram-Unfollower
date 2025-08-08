@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'utils/dark_theme_colors.dart';
 
 class LanguageSelector extends StatelessWidget {
   const LanguageSelector({super.key});
@@ -42,10 +43,10 @@ class LanguageSelector extends StatelessWidget {
           children: [
             Text(
               _getCurrentFlag(context.locale),
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(width: 4),
-            Icon(
+            const SizedBox(width: 4),
+            const Icon(
               Icons.keyboard_arrow_down,
               color: Colors.white,
               size: 14,
@@ -56,7 +57,7 @@ class LanguageSelector extends StatelessWidget {
       onSelected: (Locale locale) {
         context.setLocale(locale);
       },
-      color: Colors.white,
+      color: ThemeColors.card(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -70,23 +71,29 @@ class LanguageSelector extends StatelessWidget {
           return PopupMenuItem<Locale>(
             value: locale,
             child: Container(
-              padding: EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  Text(lang['flag']!, style: TextStyle(fontSize: 18)),
-                  SizedBox(width: 12),
+                  Text(lang['flag']!, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       lang['name']!,
                       style: TextStyle(
                         fontWeight:
                             isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? Colors.blue : Colors.black87,
+                        color: isSelected
+                            ? ThemeColors.instagramGradient(context)[0]
+                            : ThemeColors.primaryText(context),
                       ),
                     ),
                   ),
                   if (isSelected)
-                    Icon(Icons.check, color: Colors.blue, size: 18),
+                    Icon(
+                      Icons.check,
+                      color: ThemeColors.instagramGradient(context)[0],
+                      size: 18,
+                    ),
                 ],
               ),
             ),

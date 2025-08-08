@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../utils/instagram_colors.dart';
+import '../../utils/dark_theme_colors.dart';
 
 class WelcomeContent extends StatelessWidget {
   final Animation<double> pulseAnimation;
@@ -14,6 +15,11 @@ class WelcomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
     return Padding(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -25,7 +31,15 @@ class WelcomeContent extends StatelessWidget {
               padding: const EdgeInsets.all(25),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.green.shade50, Colors.green.shade100],
+                  colors: isDark
+                      ? [
+                          Colors.green.shade900.withValues(alpha: 0.3),
+                          Colors.green.shade800.withValues(alpha: 0.4),
+                        ]
+                      : [
+                          Colors.green.shade50,
+                          Colors.green.shade100,
+                        ],
                 ),
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -46,14 +60,11 @@ class WelcomeContent extends StatelessWidget {
           const SizedBox(height: 30),
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
-              colors: [
-                InstagramColors.gradientColors[2],
-                InstagramColors.gradientColors[4]
-              ],
+              colors: [gradientColors[2], gradientColors[4]],
             ).createShader(bounds),
             child: Text(
               'connected_successfully'.tr(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -66,7 +77,7 @@ class WelcomeContent extends StatelessWidget {
             'ready_to_analyze'.tr(),
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: _getSecondaryTextColor(context, isDark),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -77,16 +88,15 @@ class WelcomeContent extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  InstagramColors.gradientColors[0],
-                  InstagramColors.gradientColors[2],
-                  InstagramColors.gradientColors[4],
+                  gradientColors[0],
+                  gradientColors[2],
+                  gradientColors[4],
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color:
-                      InstagramColors.gradientColors[3].withValues(alpha: 0.3),
+                  color: gradientColors[3].withValues(alpha: 0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 ),
@@ -109,7 +119,7 @@ class WelcomeContent extends StatelessWidget {
               ),
               label: Text(
                 'analyze_my_account'.tr(),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -121,5 +131,10 @@ class WelcomeContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Helper method for theme colors
+  Color _getSecondaryTextColor(BuildContext context, bool isDark) {
+    return isDark ? DarkThemeColors.secondaryText : Colors.grey.shade600;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../../utils/dark_theme_colors.dart';
 
 class ErrorContent extends StatelessWidget {
   final String errorMessage;
@@ -13,6 +14,8 @@ class ErrorContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -22,7 +25,15 @@ class ErrorContent extends StatelessWidget {
             padding: const EdgeInsets.all(25),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.red.shade50, Colors.red.shade100],
+                colors: isDark
+                    ? [
+                        Colors.red.shade900.withValues(alpha: 0.3),
+                        Colors.red.shade800.withValues(alpha: 0.4),
+                      ]
+                    : [
+                        Colors.red.shade50,
+                        Colors.red.shade100,
+                      ],
               ),
               shape: BoxShape.circle,
               boxShadow: [
@@ -53,7 +64,7 @@ class ErrorContent extends StatelessWidget {
             errorMessage,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: _getSecondaryTextColor(context, isDark),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -80,7 +91,7 @@ class ErrorContent extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, color: Colors.white),
               label: Text(
                 'try_again'.tr(),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -91,5 +102,10 @@ class ErrorContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Helper method for theme colors
+  Color _getSecondaryTextColor(BuildContext context, bool isDark) {
+    return isDark ? DarkThemeColors.secondaryText : Colors.grey.shade600;
   }
 }

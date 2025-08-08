@@ -5,6 +5,7 @@ import 'panel_content/loading_content.dart';
 import 'panel_content/error_content.dart';
 import 'panel_content/manual_input_content.dart';
 import 'panel_content/results_content.dart';
+import '../utils/dark_theme_colors.dart';
 
 class SlidePanel extends StatelessWidget {
   final Animation<Offset> slideAnimation;
@@ -69,6 +70,8 @@ class SlidePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SlideTransition(
       position: slideAnimation,
       child: Container(
@@ -78,7 +81,15 @@ class SlidePanel extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.white, Colors.grey.shade50],
+            colors: isDark
+                ? [
+                    DarkThemeColors.cardColor,
+                    DarkThemeColors.secondaryBackground,
+                  ]
+                : [
+                    Colors.white,
+                    Colors.grey.shade50,
+                  ],
           ),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(30),
@@ -86,12 +97,16 @@ class SlidePanel extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.4)
+                  : Colors.black.withValues(alpha: 0.15),
               blurRadius: 30,
               offset: const Offset(-10, 0),
             ),
             BoxShadow(
-              color: Colors.purple.withValues(alpha: 0.1),
+              color: isDark
+                  ? DarkThemeColors.gradientColors[3].withValues(alpha: 0.2)
+                  : Colors.purple.withValues(alpha: 0.1),
               blurRadius: 40,
               offset: const Offset(-15, 0),
             ),

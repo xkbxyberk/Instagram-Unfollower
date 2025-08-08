@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../language_selector.dart';
 import '../utils/instagram_colors.dart';
+import '../utils/dark_theme_colors.dart';
+import '../services/theme_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,20 +13,25 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isDarkMode = false;
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              InstagramColors.gradientColors[0].withValues(alpha: 0.05),
-              Colors.white,
-            ],
+            colors: isDark
+                ? [
+                    DarkThemeColors.gradientColors[0].withValues(alpha: 0.1),
+                    DarkThemeColors.primaryBackground,
+                  ]
+                : [
+                    InstagramColors.gradientColors[0].withValues(alpha: 0.05),
+                    Colors.white,
+                  ],
           ),
         ),
         child: SafeArea(
@@ -36,7 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
 
                 // Header
-                _buildHeader(),
+                _buildHeader(isDark),
 
                 const SizedBox(height: 30),
 
@@ -44,10 +51,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSection(
                   title: 'app_settings'.tr(),
                   children: [
-                    _buildLanguageSetting(),
+                    _buildLanguageSetting(isDark),
                     const SizedBox(height: 10),
-                    _buildThemeSetting(),
+                    _buildThemeSetting(isDark),
                   ],
+                  isDark: isDark,
                 ),
 
                 const SizedBox(height: 20),
@@ -60,16 +68,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: Icons.info_outline,
                       title: 'version'.tr(),
                       value: '1.0.0',
+                      isDark: isDark,
                     ),
                     const SizedBox(height: 10),
                     _buildAboutItem(
                       icon: Icons.person_outline,
                       title: 'developer'.tr(),
                       value: 'berk_akbay'.tr(),
+                      isDark: isDark,
                     ),
                     const SizedBox(height: 15),
-                    _buildMadeWithLove(),
+                    _buildMadeWithLove(isDark),
                   ],
+                  isDark: isDark,
                 ),
 
                 const SizedBox(height: 20),
@@ -81,17 +92,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                InstagramColors.gradientColors[0],
-                InstagramColors.gradientColors[2],
-              ],
+              colors: isDark
+                  ? [
+                      DarkThemeColors.gradientColors[0],
+                      DarkThemeColors.gradientColors[2],
+                    ]
+                  : [
+                      InstagramColors.gradientColors[0],
+                      InstagramColors.gradientColors[2],
+                    ],
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -105,10 +121,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Expanded(
           child: Text(
             'settings_title'.tr(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: ThemeColors.primaryText(context),
             ),
           ),
         ),
@@ -119,29 +135,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSection({
     required String title,
     required List<Widget> children,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeColors.card(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: ThemeColors.cardShadow(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: ThemeColors.primaryText(context),
             ),
           ),
           const SizedBox(height: 15),
@@ -151,7 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildLanguageSetting() {
+  Widget _buildLanguageSetting(bool isDark) {
     return Row(
       children: [
         Container(
@@ -170,10 +181,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Expanded(
           child: Text(
             'language_setting'.tr(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.black87,
+              color: ThemeColors.primaryText(context),
             ),
           ),
         ),
@@ -182,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildThemeSetting() {
+  Widget _buildThemeSetting(bool isDark) {
     return Row(
       children: [
         Container(
@@ -201,52 +212,164 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Expanded(
           child: Text(
             'theme_setting'.tr(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.black87,
+              color: ThemeColors.primaryText(context),
             ),
           ),
         ),
-        SegmentedButton<bool>(
-          segments: [
-            ButtonSegment<bool>(
-              value: false,
-              label: Text(
-                'theme_light'.tr(),
-                style: const TextStyle(fontSize: 12),
-              ),
-              icon: const Icon(Icons.light_mode, size: 16),
-            ),
-            ButtonSegment<bool>(
-              value: true,
-              label: Text(
-                'theme_dark'.tr(),
-                style: const TextStyle(fontSize: 12),
-              ),
-              icon: const Icon(Icons.dark_mode, size: 16),
-            ),
-          ],
-          selected: {_isDarkMode},
-          onSelectionChanged: (selection) {
-            setState(() {
-              _isDarkMode = selection.first;
-            });
-            // TODO: Dark mode implementasyonu sonra eklenecek
-          },
-          style: SegmentedButton.styleFrom(
-            selectedBackgroundColor: InstagramColors.gradientColors[0],
-            selectedForegroundColor: Colors.white,
-          ),
-        ),
+        _buildThemeSelector(isDark),
       ],
     );
+  }
+
+  Widget _buildThemeSelector(bool isDark) {
+    return AnimatedBuilder(
+      animation: ThemeService.instance,
+      builder: (context, child) {
+        final currentTheme = ThemeService.instance.themeMode;
+
+        return PopupMenuButton<ThemeMode>(
+          onSelected: (ThemeMode mode) {
+            ThemeService.instance.setThemeMode(mode);
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          color: ThemeColors.card(context),
+          itemBuilder: (BuildContext context) => [
+            _buildThemeMenuItem(
+              ThemeMode.system,
+              Icons.brightness_auto,
+              'theme_system'.tr(),
+              currentTheme == ThemeMode.system,
+            ),
+            _buildThemeMenuItem(
+              ThemeMode.light,
+              Icons.light_mode,
+              'theme_light'.tr(),
+              currentTheme == ThemeMode.light,
+            ),
+            _buildThemeMenuItem(
+              ThemeMode.dark,
+              Icons.dark_mode,
+              'theme_dark'.tr(),
+              currentTheme == ThemeMode.dark,
+            ),
+          ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color:
+                  isDark ? DarkThemeColors.surfaceColor : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color:
+                    isDark ? DarkThemeColors.borderColor : Colors.grey.shade300,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _getThemeIcon(currentTheme),
+                  size: 16,
+                  color: ThemeColors.secondaryText(context),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _getThemeDisplayName(currentTheme),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: ThemeColors.primaryText(context),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 16,
+                  color: ThemeColors.secondaryText(context),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  PopupMenuItem<ThemeMode> _buildThemeMenuItem(
+    ThemeMode mode,
+    IconData icon,
+    String label,
+    bool isSelected,
+  ) {
+    return PopupMenuItem<ThemeMode>(
+      value: mode,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected
+                  ? ThemeColors.instagramGradient(context)[0]
+                  : ThemeColors.secondaryText(context),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected
+                      ? ThemeColors.instagramGradient(context)[0]
+                      : ThemeColors.primaryText(context),
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check,
+                color: ThemeColors.instagramGradient(context)[0],
+                size: 18,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getThemeIcon(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return Icons.light_mode;
+      case ThemeMode.dark:
+        return Icons.dark_mode;
+      case ThemeMode.system:
+        return Icons.brightness_auto;
+    }
+  }
+
+  String _getThemeDisplayName(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 'theme_light'.tr();
+      case ThemeMode.dark:
+        return 'theme_dark'.tr();
+      case ThemeMode.system:
+        return 'theme_system'.tr();
+    }
   }
 
   Widget _buildAboutItem({
     required IconData icon,
     required String title,
     required String value,
+    required bool isDark,
   }) {
     return Row(
       children: [
@@ -266,10 +389,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.black87,
+              color: ThemeColors.primaryText(context),
             ),
           ),
         ),
@@ -277,7 +400,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           value,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey.shade600,
+            color: ThemeColors.secondaryText(context),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -285,15 +408,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildMadeWithLove() {
+  Widget _buildMadeWithLove(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Colors.pink.withValues(alpha: 0.1),
-            Colors.purple.withValues(alpha: 0.1),
-          ],
+          colors: isDark
+              ? [
+                  Colors.pink.withValues(alpha: 0.2),
+                  Colors.purple.withValues(alpha: 0.2),
+                ]
+              : [
+                  Colors.pink.withValues(alpha: 0.1),
+                  Colors.purple.withValues(alpha: 0.1),
+                ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
@@ -307,7 +435,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'made_with_love'.tr(),
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade700,
+              color: ThemeColors.secondaryText(context),
               fontWeight: FontWeight.w500,
             ),
           ),
