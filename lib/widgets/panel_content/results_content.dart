@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/instagram_colors.dart';
 
 enum SortOption { none, az, za }
@@ -142,6 +143,39 @@ class _ResultsContentState extends State<ResultsContent>
     }
 
     return filteredList;
+  }
+
+  // Instagram uygulamasında profil aç
+  Future<void> _openInInstagramApp(String username) async {
+    final instagramAppUrl = 'instagram://user?username=$username';
+    final instagramWebUrl = 'https://www.instagram.com/$username/';
+
+    try {
+      // Önce Instagram uygulamasını açmayı dene
+      if (await canLaunchUrl(Uri.parse(instagramAppUrl))) {
+        await launchUrl(
+          Uri.parse(instagramAppUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        // Uygulama yüklü değilse web sitesini aç
+        await launchUrl(
+          Uri.parse(instagramWebUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    } catch (e) {
+      // Hata durumunda fallback olarak web sitesini aç
+      try {
+        await launchUrl(
+          Uri.parse(instagramWebUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      } catch (e) {
+        // Son çare olarak mevcut webview'de aç
+        widget.onOpenUserProfile(username);
+      }
+    }
   }
 
   @override
@@ -672,27 +706,60 @@ class _ResultsContentState extends State<ResultsContent>
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  trailing: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          InstagramColors.gradientColors[0],
-                          InstagramColors.gradientColors[2]
-                        ],
+                  // ✅ YENİ: İki buton yan yana
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Web'de aç butonu
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.blue.shade500,
+                              Colors.blue.shade700,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.language_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          padding: EdgeInsets.zero,
+                          onPressed: () => widget.onOpenUserProfile(username),
+                          tooltip: 'Web\'de aç',
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.open_in_new_rounded,
-                        color: Colors.white,
-                        size: 16,
+                      const SizedBox(width: 6),
+                      // Instagram uygulamasında aç butonu
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              InstagramColors.gradientColors[2],
+                              InstagramColors.gradientColors[4],
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.launch_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          padding: EdgeInsets.zero,
+                          onPressed: () => _openInInstagramApp(username),
+                          tooltip: 'Instagram uygulamasında aç',
+                        ),
                       ),
-                      padding: EdgeInsets.zero,
-                      onPressed: () => widget.onOpenUserProfile(username),
-                    ),
+                    ],
                   ),
                   onTap: () => widget.onToggleUserSelection(username),
                 ),
