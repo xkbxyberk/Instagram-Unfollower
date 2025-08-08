@@ -14,19 +14,27 @@ class SlidePanel extends StatelessWidget {
   final String errorMessage;
   final String progressMessage;
   final String currentUsername;
-  final List<String> unfollowers;
+  final List<Map<String, dynamic>> unfollowers;
+  final List<Map<String, dynamic>> fans;
   final Set<String> selectedUsers;
   final TextEditingController usernameController;
   final Animation<double> pulseAnimation;
   final VoidCallback onClose;
   final VoidCallback onAnalyzePressed;
-  final VoidCallback onSelectAll;
+  final Function(List<Map<String, dynamic>>) onSelectAll;
   final VoidCallback onCopySelected;
   final VoidCallback onRestartAnalysis;
   final VoidCallback onStartManualAnalysis;
   final VoidCallback onClearError;
   final Function(String) onToggleUserSelection;
   final Function(String) onOpenUserProfile;
+
+  // Panel state preservation
+  final int initialTabIndex;
+  final String initialSearchQuery;
+  final String initialSortOption;
+  final double initialScrollPosition;
+  final Function(int?, String?, String?, double?) onUpdatePanelState;
 
   const SlidePanel({
     super.key,
@@ -38,6 +46,7 @@ class SlidePanel extends StatelessWidget {
     required this.progressMessage,
     required this.currentUsername,
     required this.unfollowers,
+    required this.fans,
     required this.selectedUsers,
     required this.usernameController,
     required this.pulseAnimation,
@@ -50,6 +59,12 @@ class SlidePanel extends StatelessWidget {
     required this.onClearError,
     required this.onToggleUserSelection,
     required this.onOpenUserProfile,
+    // Panel state preservation
+    this.initialTabIndex = 0,
+    this.initialSearchQuery = '',
+    this.initialSortOption = 'none',
+    this.initialScrollPosition = 0.0,
+    required this.onUpdatePanelState,
   });
 
   @override
@@ -107,12 +122,19 @@ class SlidePanel extends StatelessWidget {
     } else if (hasResults) {
       return ResultsContent(
         unfollowers: unfollowers,
+        fans: fans,
         selectedUsers: selectedUsers,
         onSelectAll: onSelectAll,
         onCopySelected: onCopySelected,
         onRestartAnalysis: onRestartAnalysis,
         onToggleUserSelection: onToggleUserSelection,
         onOpenUserProfile: onOpenUserProfile,
+        // Panel state preservation
+        initialTabIndex: initialTabIndex,
+        initialSearchQuery: initialSearchQuery,
+        initialSortOption: initialSortOption,
+        initialScrollPosition: initialScrollPosition,
+        onUpdatePanelState: onUpdatePanelState,
       );
     } else if (showManualInput) {
       return ManualInputContent(

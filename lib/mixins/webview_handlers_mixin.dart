@@ -14,7 +14,8 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
   final TextEditingController usernameController = TextEditingController();
 
   bool isLoggedIn = false;
-  List<String> unfollowers = [];
+  List<Map<String, dynamic>> unfollowers = [];
+  List<Map<String, dynamic>> fans = [];
   bool isLoading = false;
   String errorMessage = '';
   String progressMessage = '';
@@ -24,6 +25,12 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
   bool isPanelOpen = false;
   Set<String> selectedUsers = <String>{};
   Timer? urlMonitorTimer;
+
+  // Panel state preservation
+  int currentTabIndex = 0;
+  String searchQuery = '';
+  String sortOption = 'none';
+  double scrollPosition = 0.0;
 
   // Analytics callback - Ana screen'e dashboard güncellemesi için
   VoidCallback? onAnalysisCompleted;
@@ -107,11 +114,12 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
                 errorMessage = decodedMessage['error'];
                 progressMessage = '';
               });
+            } else if (decodedMessage.containsKey('notFollowingBack') ||
+                decodedMessage.containsKey('fans')) {
+              // Yeni analiz sonuçları geldi
+              _handleAnalysisResults(Map<String, dynamic>.from(decodedMessage));
             }
         }
-      } else if (decodedMessage is List) {
-        // Analiz tamamlandı - Analytics'e kaydet
-        _recordAnalysisCompletion(decodedMessage.cast<String>());
       }
     } catch (e) {
       setState(() {
@@ -122,8 +130,70 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     }
   }
 
+  // Analiz sonuçlarını işle
+  void _handleAnalysisResults(Map<String, dynamic> results) {
+    try {
+      final notFollowingBackList = results['notFollowingBack'] as List? ?? [];
+      final fansList = results['fans'] as List? ?? [];
+
+      final processedUnfollowers = <Map<String, dynamic>>[];
+      for (final user in notFollowingBackList) {
+        if (user is Map) {
+          final userMap = Map<String, dynamic>.from(user);
+          processedUnfollowers.add({
+            'username': userMap['username']?.toString() ?? '',
+            'profilePicUrl': userMap['profilePicUrl']?.toString() ?? '',
+          });
+        } else if (user is String) {
+          // Backwards compatibility
+          processedUnfollowers.add({
+            'username': user,
+            'profilePicUrl': '',
+          });
+        } else {
+          processedUnfollowers.add({
+            'username': user.toString(),
+            'profilePicUrl': '',
+          });
+        }
+      }
+
+      final processedFans = <Map<String, dynamic>>[];
+      for (final user in fansList) {
+        if (user is Map) {
+          final userMap = Map<String, dynamic>.from(user);
+          processedFans.add({
+            'username': userMap['username']?.toString() ?? '',
+            'profilePicUrl': userMap['profilePicUrl']?.toString() ?? '',
+          });
+        } else if (user is String) {
+          processedFans.add({
+            'username': user,
+            'profilePicUrl': '',
+          });
+        } else {
+          processedFans.add({
+            'username': user.toString(),
+            'profilePicUrl': '',
+          });
+        }
+      }
+
+      _recordAnalysisCompletion(processedUnfollowers, processedFans);
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = 'data_retrieval_error'.tr();
+        progressMessage = '';
+      });
+    }
+  }
+
   // Analiz tamamlandığında analytics'e kaydet
-  Future<void> _recordAnalysisCompletion(List<String> unfollowersList) async {
+  Future<void> _recordAnalysisCompletion(
+    List<Map<String, dynamic>> unfollowersList,
+    List<Map<String, dynamic>> fansList,
+  ) async {
     try {
       // Analytics servisine analiz tamamlandığını kaydet
       await AnalyticsService.instance.recordAnalysis();
@@ -131,6 +201,7 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
       // Sonuçları güncelle
       setState(() {
         unfollowers = unfollowersList;
+        fans = fansList;
         isLoading = false;
         progressMessage = '';
         showManualInput = false;
@@ -148,6 +219,7 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
 
       // Başarı mesajı göster
       if (mounted) {
+        final totalCount = unfollowersList.length + fansList.length;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -156,7 +228,7 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '${'analysis_completed'.tr()} - ${unfollowersList.length} ${'people_found'.tr().toLowerCase()}', // string interpolation düzeltmesi
+                    '${'analysis_completed'.tr()} - $totalCount ${'people_found'.tr().toLowerCase()}',
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -175,6 +247,7 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
       // Analytics kaydetme hatası - sessizce geç
       setState(() {
         unfollowers = unfollowersList;
+        fans = fansList;
         isLoading = false;
         progressMessage = '';
         showManualInput = false;
@@ -224,6 +297,7 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     setState(() {
       isLoggedIn = false;
       unfollowers.clear();
+      fans.clear();
       isLoading = false;
       errorMessage = '';
       progressMessage = '';
@@ -293,12 +367,14 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     }
   }
 
-  void selectAllUsers() {
+  void selectAllUsers(List<Map<String, dynamic>> currentList) {
     setState(() {
-      if (selectedUsers.length == unfollowers.length) {
-        selectedUsers.clear();
+      final currentUsernames =
+          currentList.map((user) => user['username'] as String).toSet();
+      if (selectedUsers.containsAll(currentUsernames)) {
+        selectedUsers.removeAll(currentUsernames);
       } else {
-        selectedUsers = unfollowers.toSet();
+        selectedUsers.addAll(currentUsernames);
       }
     });
   }
@@ -309,16 +385,12 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
       isLoading = true;
       errorMessage = '';
       unfollowers.clear();
+      fans.clear();
       progressMessage = 'starting_analysis'.tr();
     });
 
-    // Analytics'e analiz başlatıldığını kaydet (sadece başlangıç)
-    try {
-      // NOT: Burada kaydetmiyoruz, sadece tamamlandığında kaydedeceğiz
-      // Bu şekilde başarısız analizler sayılmaz
-    } catch (e) {
-      // Sessizce devam et
-    }
+    // Panel state'ini sıfırla
+    _resetPanelState();
 
     if (username != null) {
       controller.runJavaScript('analyzeAccount("$username")');
@@ -334,9 +406,14 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
         isLoading = true;
         errorMessage = '';
         unfollowers.clear();
+        fans.clear();
         progressMessage = 'starting_analysis'.tr();
         showManualInput = false;
       });
+
+      // Panel state'ini sıfırla
+      _resetPanelState();
+
       controller.runJavaScript('analyzeAccount("$username")');
     }
   }
@@ -344,6 +421,7 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
   void restartAnalysis() {
     setState(() {
       unfollowers.clear();
+      fans.clear();
       errorMessage = '';
       showManualInput = false;
       hasResults = false;
@@ -351,6 +429,10 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
       progressMessage = 'starting_analysis'.tr();
       selectedUsers.clear();
     });
+
+    // Panel state'ini sıfırla
+    _resetPanelState();
+
     controller.runJavaScript('analyzeAccount()');
   }
 
@@ -372,10 +454,34 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
   }
 
   void openUserProfile(String username) {
+    // State'i koru panel kapanmadan önce
+    _preservePanelState();
     closePanel();
     controller.loadRequest(
       Uri.parse('https://www.instagram.com/$username/'),
     );
+  }
+
+  // Panel state'ini koru
+  void _preservePanelState() {
+    // State zaten class seviyesinde tutuluyor, bir şey yapmaya gerek yok
+  }
+
+  // Panel state'ini güncelle
+  void updatePanelState(
+      int? tabIndex, String? search, String? sort, double? scroll) {
+    if (tabIndex != null) currentTabIndex = tabIndex;
+    if (search != null) searchQuery = search;
+    if (sort != null) sortOption = sort;
+    if (scroll != null) scrollPosition = scroll;
+  }
+
+  // Panel state'ini sıfırla (yeni analiz başladığında)
+  void _resetPanelState() {
+    currentTabIndex = 0;
+    searchQuery = '';
+    sortOption = 'none';
+    scrollPosition = 0.0;
   }
 
   @override

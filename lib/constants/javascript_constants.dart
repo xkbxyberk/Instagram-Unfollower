@@ -332,12 +332,41 @@ class JavaScriptConstants {
       
       UnfollowerChannel.postMessage(JSON.stringify({status: 'progress', message: 'Comparing lists...'}));
       
-      const followersUsernames = followers.map((follower) => follower.username.toLowerCase());
-      const followingUsernames = following.map((followed) => followed.username.toLowerCase());
-      const followerSet = new Set(followersUsernames);
-      const PeopleNotFollowingMeBack = followingUsernames.filter((following) => !followerSet.has(following));
+      // Create maps for easier lookup with both username and profile picture
+      const followersMap = new Map();
+      const followingMap = new Map();
       
-      return { PeopleNotFollowingMeBack };
+      followers.forEach((user) => {
+        followersMap.set(user.username.toLowerCase(), {
+          username: user.username,
+          profilePicUrl: user.profile_pic_url || ''
+        });
+      });
+      
+      following.forEach((user) => {
+        followingMap.set(user.username.toLowerCase(), {
+          username: user.username,
+          profilePicUrl: user.profile_pic_url || ''
+        });
+      });
+      
+      // People I follow but don't follow me back
+      const notFollowingBack = [];
+      followingMap.forEach((userData, username) => {
+        if (!followersMap.has(username)) {
+          notFollowingBack.push(userData);
+        }
+      });
+      
+      // People who follow me but I don't follow back (fans)
+      const fans = [];
+      followersMap.forEach((userData, username) => {
+        if (!followingMap.has(username)) {
+          fans.push(userData);
+        }
+      });
+      
+      return { notFollowingBack, fans };
     };
 
     async function analyzeAccount(username = null) {
@@ -361,7 +390,7 @@ class JavaScriptConstants {
         }));
         
         const result = await getUserFriendshipStats(targetUsername);
-        UnfollowerChannel.postMessage(JSON.stringify(result.PeopleNotFollowingMeBack));
+        UnfollowerChannel.postMessage(JSON.stringify(result));
         
       } catch (e) {
         UnfollowerChannel.postMessage('{"error":"' + e.message + '"}');
