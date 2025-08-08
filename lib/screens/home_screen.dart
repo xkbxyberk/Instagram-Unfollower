@@ -392,20 +392,26 @@ class HomeScreenState extends State<HomeScreen> {
       switch (alert.severity) {
         case AlertSeverity.high:
           statusColor = Colors.red;
-          statusText = alert.message;
-          statusSubtitle = alert.subtitle;
+          statusText =
+              alert.getMessage(); // ✅ DÜZELTİLDİ: getMessage() kullanıyoruz
+          statusSubtitle =
+              alert.getSubtitle(); // ✅ DÜZELTİLDİ: getSubtitle() kullanıyoruz
           statusIcon = Icons.warning_rounded;
           break;
         case AlertSeverity.medium:
           statusColor = Colors.orange;
-          statusText = alert.message;
-          statusSubtitle = alert.subtitle;
+          statusText =
+              alert.getMessage(); // ✅ DÜZELTİLDİ: getMessage() kullanıyoruz
+          statusSubtitle =
+              alert.getSubtitle(); // ✅ DÜZELTİLDİ: getSubtitle() kullanıyoruz
           statusIcon = Icons.info_outlined;
           break;
         case AlertSeverity.low:
           statusColor = Colors.blue;
-          statusText = alert.message;
-          statusSubtitle = alert.subtitle;
+          statusText =
+              alert.getMessage(); // ✅ DÜZELTİLDİ: getMessage() kullanıyoruz
+          statusSubtitle =
+              alert.getSubtitle(); // ✅ DÜZELTİLDİ: getSubtitle() kullanıyoruz
           statusIcon = Icons.access_time_rounded;
           break;
       }
@@ -666,7 +672,7 @@ class HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 15),
               Expanded(
                 child: Text(
-                  alert.message,
+                  alert.getMessage(), // ✅ DÜZELTİLDİ: getMessage() kullanıyoruz
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade800,
@@ -677,12 +683,13 @@ class HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          if (alert.subtitle != null) ...[
+          if (alert.getSubtitle() != null) ...[
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.only(left: 39),
               child: Text(
-                alert.subtitle!,
+                alert
+                    .getSubtitle()!, // ✅ DÜZELTİLDİ: getSubtitle() kullanıyoruz
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade600,

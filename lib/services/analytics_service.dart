@@ -203,7 +203,7 @@ class AnalyticsService {
     }
   }
 
-  // Güvenlik uyarısı gerekli mi kontrol et
+  // Güvenlik uyarısı gerekli mi kontrol et - ÇEVİRİ ANAHTARLARI İLE
   Future<SecurityAlert?> checkForSecurityAlerts() async {
     final weeklyCount = await getWeeklyAnalyses();
     final lastAnalysis = await getLastAnalysisDate();
@@ -212,15 +212,17 @@ class AnalyticsService {
     if (weeklyCount >= 10) {
       return SecurityAlert(
         type: SecurityAlertType.overuse,
-        message: 'weekly_limit_exceeded'.tr(args: [weeklyCount.toString()]),
-        subtitle: 'take_a_break'.tr(),
+        messageKey: 'weekly_limit_exceeded',
+        messageArgs: [weeklyCount.toString()],
+        subtitleKey: 'take_a_break',
         severity: AlertSeverity.high,
       );
     } else if (weeklyCount >= 7) {
       return SecurityAlert(
         type: SecurityAlertType.warning,
-        message: 'weekly_limit_approaching'.tr(args: [weeklyCount.toString()]),
-        subtitle: 'use_responsibly'.tr(),
+        messageKey: 'weekly_limit_approaching',
+        messageArgs: [weeklyCount.toString()],
+        subtitleKey: 'use_responsibly',
         severity: AlertSeverity.medium,
       );
     }
@@ -233,17 +235,17 @@ class AnalyticsService {
       if (hoursSinceLastAnalysis < 1) {
         return SecurityAlert(
           type: SecurityAlertType.recentActivity,
-          message: 'last_analysis_time'.tr(args: ['just_now'.tr()]),
-          subtitle: 'avoid_frequent_analysis'.tr(),
+          messageKey: 'last_analysis_time',
+          messageArgs: ['just_now'],
+          subtitleKey: 'avoid_frequent_analysis',
           severity: AlertSeverity.low,
         );
       } else if (hoursSinceLastAnalysis < 6) {
         return SecurityAlert(
           type: SecurityAlertType.recentActivity,
-          message: 'last_analysis_time'.tr(args: [
-            'hours_ago'.tr(args: [hoursSinceLastAnalysis.toString()])
-          ]),
-          subtitle: 'normal_usage_range'.tr(),
+          messageKey: 'last_analysis_time',
+          messageArgs: ['hours_ago:${hoursSinceLastAnalysis.toString()}'],
+          subtitleKey: 'normal_usage_range',
           severity: AlertSeverity.low,
         );
       }
@@ -290,16 +292,47 @@ class AnalyticsService {
 
 class SecurityAlert {
   final SecurityAlertType type;
-  final String message;
-  final String? subtitle;
+  final String messageKey; // Çeviri anahtarı
+  final List<String>? messageArgs; // Çeviri argümanları
+  final String? subtitleKey; // Çeviri anahtarı
+  final List<String>? subtitleArgs; // Çeviri argümanları
   final AlertSeverity severity;
 
   SecurityAlert({
     required this.type,
-    required this.message,
-    this.subtitle,
+    required this.messageKey,
+    this.messageArgs,
+    this.subtitleKey,
+    this.subtitleArgs,
     required this.severity,
   });
+
+  // Çevrilmiş mesajı getir
+  String getMessage() {
+    if (messageArgs != null && messageArgs!.isNotEmpty) {
+      // Özel args işleme - "hours_ago:3" gibi durumlar için
+      final processedArgs = messageArgs!.map((arg) {
+        if (arg.contains(':')) {
+          final parts = arg.split(':');
+          if (parts.length == 2) {
+            return parts[0].tr(args: [parts[1]]);
+          }
+        }
+        return arg.tr();
+      }).toList();
+      return messageKey.tr(args: processedArgs);
+    }
+    return messageKey.tr();
+  }
+
+  // Çevrilmiş alt başlığı getir
+  String? getSubtitle() {
+    if (subtitleKey == null) return null;
+    if (subtitleArgs != null && subtitleArgs!.isNotEmpty) {
+      return subtitleKey!.tr(args: subtitleArgs!);
+    }
+    return subtitleKey!.tr();
+  }
 }
 
 enum SecurityAlertType {
