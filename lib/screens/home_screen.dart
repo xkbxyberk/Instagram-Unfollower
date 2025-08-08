@@ -384,27 +384,36 @@ class HomeScreenState extends State<HomeScreen> {
   Widget _buildSecurityStatusCard() {
     final alert = _dashboardState.currentAlert;
     Color statusColor = Colors.green;
-    String statusText = 'secure_green'.tr();
+    String statusText = 'security_status_safe'.tr();
+    String? statusSubtitle;
     IconData statusIcon = Icons.security_outlined;
 
     if (alert != null) {
       switch (alert.severity) {
         case AlertSeverity.high:
           statusColor = Colors.red;
-          statusText = 'alert_high'.tr();
-          statusIcon = Icons.error_outlined;
+          statusText = alert.message;
+          statusSubtitle = alert.subtitle;
+          statusIcon = Icons.warning_rounded;
           break;
         case AlertSeverity.medium:
           statusColor = Colors.orange;
-          statusText = 'alert_medium'.tr();
-          statusIcon = Icons.warning_outlined;
+          statusText = alert.message;
+          statusSubtitle = alert.subtitle;
+          statusIcon = Icons.info_outlined;
           break;
         case AlertSeverity.low:
           statusColor = Colors.blue;
-          statusText = 'alert_low'.tr();
-          statusIcon = Icons.info_outline;
+          statusText = alert.message;
+          statusSubtitle = alert.subtitle;
+          statusIcon = Icons.access_time_rounded;
           break;
       }
+    } else {
+      // Güvenli durum için daha detaylı bilgi
+      final weeklyCount = _dashboardState.weeklyAnalyses;
+      statusSubtitle =
+          'usage_this_week'.tr(args: [weeklyCount.toString(), '10']);
     }
 
     return _buildStatusCard(
@@ -413,6 +422,7 @@ class HomeScreenState extends State<HomeScreen> {
       icon: statusIcon,
       color: statusColor,
       context: context,
+      subtitle: statusSubtitle,
     );
   }
 
@@ -562,43 +572,51 @@ class HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 15),
           Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
             value,
-            style: const TextStyle(
-              fontSize: 16,
+            style: TextStyle(
+              fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: color,
+              height: 1.2,
             ),
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             Text(
               subtitle,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade500,
+                height: 1.3,
               ),
             ),
           ],
@@ -635,25 +653,44 @@ class HomeScreenState extends State<HomeScreen> {
           color: alertColor.withValues(alpha: 0.3),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            alertIcon,
-            color: alertColor,
-            size: 24,
+          Row(
+            children: [
+              Icon(
+                alertIcon,
+                color: alertColor,
+                size: 24,
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Text(
+                  alert.message,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade800,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Text(
-              alert.message,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade800,
-                fontWeight: FontWeight.w500,
-                height: 1.4,
+          if (alert.subtitle != null) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 39),
+              child: Text(
+                alert.subtitle!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  height: 1.3,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

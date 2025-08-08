@@ -123,5 +123,18 @@
   "max_weekly_limit": "Weekly limit: 10",
   "progress_safe": "Safe range",
   "progress_caution": "Use carefully",
-  "progress_danger": "Risk of limit"
+  "progress_danger": "Risk of limit",
+  "security_status_safe": "Safe Usage",
+  "security_status_recent": "Recent Activity",
+  "security_status_warning": "Approaching Limit",
+  "security_status_danger": "Limit Exceeded",
+  "usage_this_week": "This week {}/{}",
+  "last_analysis_time": "Last analysis: {}",
+  "normal_usage_range": "Normal usage range",
+  "avoid_frequent_analysis": "Avoid frequent analysis",
+  "weekly_limit_exceeded": "Weekly limit exceeded ({}/10)",
+  "weekly_limit_approaching": "Approaching weekly limit ({}/10)",
+  "use_responsibly": "Use responsibly to avoid Instagram limits",
+  "take_a_break": "Take a break to avoid Instagram limits",
+  "recent_analysis_warning": "Recent analysis detected"
 }

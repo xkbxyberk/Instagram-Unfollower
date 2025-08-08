@@ -123,5 +123,18 @@
   "max_weekly_limit": "Haftalık limit: 10",
   "progress_safe": "Güvenli aralıkta",
   "progress_caution": "Dikkatli olun",
-  "progress_danger": "Limit aşımı riski"
+  "progress_danger": "Limit aşımı riski",
+  "security_status_safe": "Güvenli Kullanım",
+  "security_status_recent": "Son Aktivite",
+  "security_status_warning": "Limite Yakın",
+  "security_status_danger": "Limit Aşıldı",
+  "usage_this_week": "Bu hafta {}/{}",
+  "last_analysis_time": "Son analiz: {}",
+  "normal_usage_range": "Normal kullanım aralığında",
+  "avoid_frequent_analysis": "Çok sık analiz yapmaktan kaçının",
+  "weekly_limit_exceeded": "Haftalık limit aşıldı ({}/10)",
+  "weekly_limit_approaching": "Haftalık limite yaklaşıyorsunuz ({}/10)",
+  "use_responsibly": "Instagram limitlerini aşmamak için sorumlu kullanın",
+  "take_a_break": "Instagram limitlerini aşmamak için biraz ara verin",
+  "recent_analysis_warning": "Son zamanlarda analiz yapıldı"
 }

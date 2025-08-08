@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AnalyticsService {
   static const String _keyTotalAnalyses = 'total_analyses';
@@ -211,34 +212,44 @@ class AnalyticsService {
     if (weeklyCount >= 10) {
       return SecurityAlert(
         type: SecurityAlertType.overuse,
-        message:
-            'Bu hafta çok fazla analiz yaptınız. Instagram limitlerini aşmamak için biraz ara verin.',
+        message: 'weekly_limit_exceeded'.tr(args: [weeklyCount.toString()]),
+        subtitle: 'take_a_break'.tr(),
         severity: AlertSeverity.high,
       );
-    } else if (weeklyCount >= 5) {
+    } else if (weeklyCount >= 7) {
       return SecurityAlert(
         type: SecurityAlertType.warning,
-        message:
-            'Bu hafta $weeklyCount kez analiz yaptınız. Güvenli kullanım için sınırlayın.',
+        message: 'weekly_limit_approaching'.tr(args: [weeklyCount.toString()]),
+        subtitle: 'use_responsibly'.tr(),
         severity: AlertSeverity.medium,
       );
     }
 
-    // Son 24 saatte çok fazla analiz yapıldıysa
+    // Son analiz zamanı kontrolü
     if (lastAnalysis != null) {
       final hoursSinceLastAnalysis =
           DateTime.now().difference(lastAnalysis).inHours;
-      if (hoursSinceLastAnalysis < 2) {
+
+      if (hoursSinceLastAnalysis < 1) {
         return SecurityAlert(
-          type: SecurityAlertType.frequency,
-          message:
-              'Son analizi ${hoursSinceLastAnalysis == 0 ? "az önce" : "$hoursSinceLastAnalysis saat önce"} yaptınız.',
+          type: SecurityAlertType.recentActivity,
+          message: 'last_analysis_time'.tr(args: ['just_now'.tr()]),
+          subtitle: 'avoid_frequent_analysis'.tr(),
+          severity: AlertSeverity.low,
+        );
+      } else if (hoursSinceLastAnalysis < 6) {
+        return SecurityAlert(
+          type: SecurityAlertType.recentActivity,
+          message: 'last_analysis_time'.tr(args: [
+            'hours_ago'.tr(args: [hoursSinceLastAnalysis.toString()])
+          ]),
+          subtitle: 'normal_usage_range'.tr(),
           severity: AlertSeverity.low,
         );
       }
     }
 
-    return null;
+    return null; // Güvenli durum
   }
 
   // Uygulama kullanım süresini getir
@@ -280,11 +291,13 @@ class AnalyticsService {
 class SecurityAlert {
   final SecurityAlertType type;
   final String message;
+  final String? subtitle;
   final AlertSeverity severity;
 
   SecurityAlert({
     required this.type,
     required this.message,
+    this.subtitle,
     required this.severity,
   });
 }
@@ -292,6 +305,7 @@ class SecurityAlert {
 enum SecurityAlertType {
   overuse,
   warning,
+  recentActivity,
   frequency,
 }
 
