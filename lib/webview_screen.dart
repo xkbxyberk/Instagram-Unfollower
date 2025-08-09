@@ -5,6 +5,7 @@ import 'mixins/webview_handlers_mixin.dart';
 import 'widgets/instagram_header.dart';
 import 'widgets/slide_panel.dart';
 import 'widgets/edge_indicator.dart';
+import 'widgets/url_bar.dart';
 import 'utils/dark_theme_colors.dart';
 
 class WebViewScreen extends StatefulWidget {
@@ -53,28 +54,41 @@ class _WebViewScreenState extends State<WebViewScreen>
                 isLoggedIn: isLoggedIn,
               ),
               Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? DarkThemeColors.secondaryBackground
-                        : Colors.white,
-                    boxShadow: isDark
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 10,
-                              offset: const Offset(0, -2),
-                            ),
-                          ]
-                        : [
-                            BoxShadow(
-                              color: Colors.grey.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, -2),
-                            ),
-                          ],
-                  ),
-                  child: WebViewWidget(controller: controller),
+                child: Column(
+                  children: [
+                    // WebView Container
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? DarkThemeColors.secondaryBackground
+                              : Colors.white,
+                          boxShadow: isDark
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, -2),
+                                  ),
+                                ]
+                              : [
+                                  BoxShadow(
+                                    color: Colors.grey.withValues(alpha: 0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, -2),
+                                  ),
+                                ],
+                        ),
+                        child: WebViewWidget(controller: controller),
+                      ),
+                    ),
+                    // URL Bar
+                    UrlBar(
+                      currentUrl: currentUrl,
+                      onRefresh: refreshWebView,
+                      isLoading: isWebViewLoading,
+                    ),
+                  ],
                 ),
               ),
             ],

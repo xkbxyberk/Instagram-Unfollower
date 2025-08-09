@@ -26,6 +26,10 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
   Set<String> selectedUsers = <String>{};
   Timer? urlMonitorTimer;
 
+  // URL Bar için yeni state'ler
+  String currentUrl = '';
+  bool isWebViewLoading = false;
+
   // Panel state preservation
   int currentTabIndex = 0;
   String searchQuery = '';
@@ -51,7 +55,24 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
 
       await controller.setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: handlePageFinished,
+          onPageStarted: (String url) {
+            setState(() {
+              currentUrl = url;
+              isWebViewLoading = true;
+            });
+          },
+          onPageFinished: (String url) {
+            setState(() {
+              currentUrl = url;
+              isWebViewLoading = false;
+            });
+            handlePageFinished(url);
+          },
+          onWebResourceError: (WebResourceError error) {
+            setState(() {
+              isWebViewLoading = false;
+            });
+          },
         ),
       );
 
@@ -332,6 +353,16 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
           isPanelOpen = false;
         });
       });
+    }
+  }
+
+  // WebView sayfayı yenileme fonksiyonu
+  void refreshWebView() {
+    if (!isWebViewLoading) {
+      setState(() {
+        isWebViewLoading = true;
+      });
+      controller.reload();
     }
   }
 
