@@ -1,45 +1,161 @@
 class JavaScriptConstants {
   static const String logoutDetectionCode = r'''
+    let lastLoginStatus = null;
+    let consecutiveLogoutChecks = 0;
+    
     const checkLoginStatus = () => {
       try {
         const currentUrl = window.location.href;
+        
+        // Logout URL'lerini kontrol et
+        const isLogoutUrl = currentUrl.includes('/accounts/logout') || 
+                           currentUrl.includes('/logout') ||
+                           currentUrl.includes('sessionid') ||
+                           currentUrl.includes('/accounts/login/?next=') ||
+                           currentUrl.includes('?next=');
+        
+        // Login sayfalarını kontrol et
         const isLoginPage = currentUrl.includes('/accounts/login') || 
                            currentUrl.includes('/accounts/emailsignup') ||
                            currentUrl.includes('/accounts/signin');
         
+        // Login form varlığını kontrol et
         const hasLoginForm = document.querySelector('input[name="username"]') !== null;
         
+        // Ana sayfa kontrolü
         const isMainPage = currentUrl === 'https://www.instagram.com/' || 
                           currentUrl.includes('instagram.com/?') ||
                           currentUrl.match(/^https:\/\/www\.instagram\.com\/?$/);
         
+        // Instagram logout landing page kontrolü (?flo=true sayfası)
+        const isLogoutLandingPage = (currentUrl.includes('?flo=true') || 
+                                   currentUrl.includes('flo=true')) &&
+                                  (document.querySelector('button[type="button"]') !== null ||
+                                   document.textContent.includes('Open Instagram') ||
+                                   document.textContent.includes('Log in or sign up') ||
+                                   document.textContent.includes('Share everyday moments') ||
+                                   document.textContent.includes('from Meta') ||
+                                   document.querySelector('a[href*="sign_up"]') !== null ||
+                                   (document.querySelector('button') && 
+                                    document.querySelector('button').textContent.includes('Open Instagram')));
+        
+        // Logout URL'sinde ise hemen logout olarak işaretle
+        if (isLogoutUrl) {
+          UnfollowerChannel.postMessage(JSON.stringify({
+            status: 'logged_out',
+            reason: 'logout_url_detected'
+          }));
+          lastLoginStatus = 'logged_out';
+          return;
+        }
+        
+        // Logout landing page'inde ise logout olarak işaretle
+        if (isLogoutLandingPage) {
+          if (lastLoginStatus !== 'logged_out') {
+            UnfollowerChannel.postMessage(JSON.stringify({
+              status: 'logged_out',
+              reason: 'logout_landing_page_detected'
+            }));
+            lastLoginStatus = 'logged_out';
+          }
+          return;
+        }
+        
+        // Ana sayfada login form varsa logout
         if (isMainPage && hasLoginForm) {
-          UnfollowerChannel.postMessage(JSON.stringify({
-            status: 'logged_out',
-            reason: 'login_form_on_main_page'
-          }));
+          if (lastLoginStatus !== 'logged_out') {
+            UnfollowerChannel.postMessage(JSON.stringify({
+              status: 'logged_out',
+              reason: 'login_form_on_main_page'
+            }));
+            lastLoginStatus = 'logged_out';
+          }
           return;
         }
         
+        // Login sayfasında ise logout
         if (isLoginPage) {
-          UnfollowerChannel.postMessage(JSON.stringify({
-            status: 'logged_out',
-            reason: 'redirected_to_login'
-          }));
+          if (lastLoginStatus !== 'logged_out') {
+            UnfollowerChannel.postMessage(JSON.stringify({
+              status: 'logged_out',
+              reason: 'redirected_to_login'
+            }));
+            lastLoginStatus = 'logged_out';
+          }
           return;
         }
         
+        // Instagram sayfasında ve login form yok ise giriş durumunu kontrol et
         if (currentUrl.includes('instagram.com') && !isLoginPage && !hasLoginForm) {
+          // Navigation elementlerini kontrol et
           const hasNavigation = document.querySelector('nav') !== null ||
                                 document.querySelector('[role="navigation"]') !== null ||
                                 document.querySelector('header') !== null;
           
-          if (hasNavigation) {
-            UnfollowerChannel.postMessage(JSON.stringify({
-              status: 'logged_in_confirmed',
-              url: currentUrl
-            }));
+          // Profile linkini kontrol et (giriş yapmış kullanıcılarda olur)
+          const hasProfileLink = document.querySelector('[href*="/accounts/edit/"]') !== null ||
+                                 document.querySelector('[href*="/accounts/"]') !== null ||
+                                 document.querySelector('[aria-label*="Profile"]') !== null;
+          
+          // Stories veya feed elementlerini kontrol et
+          const hasFeedElements = document.querySelector('[role="button"][aria-label*="Story"]') !== null ||
+                                 document.querySelector('article') !== null ||
+                                 document.querySelector('[data-testid="story-viewer"]') !== null;
+          
+          // Username display elementini kontrol et
+          const hasUserDisplay = document.querySelector('[data-testid="user-avatar"]') !== null ||
+                                 document.querySelector('img[alt*="profile picture"]') !== null;
+          
+          // Eğer bu elementlerden herhangi biri varsa ve navigation varsa giriş yapmış
+          if (hasNavigation && (hasProfileLink || hasFeedElements || hasUserDisplay)) {
+            if (lastLoginStatus !== 'logged_in') {
+              UnfollowerChannel.postMessage(JSON.stringify({
+                status: 'logged_in_confirmed',
+                url: currentUrl
+              }));
+              lastLoginStatus = 'logged_in';
+              consecutiveLogoutChecks = 0;
+            }
+            return;
           }
+          
+          // Eğer navigation var ama diğer elementler yoksa şüpheli durum
+          if (hasNavigation && !hasProfileLink && !hasFeedElements && !hasUserDisplay) {
+            consecutiveLogoutChecks++;
+            
+            // 3 kez üst üste bu durumda ise muhtemelen çıkış yapılmış
+            if (consecutiveLogoutChecks >= 3 && lastLoginStatus === 'logged_in') {
+              UnfollowerChannel.postMessage(JSON.stringify({
+                status: 'logged_out',
+                reason: 'session_elements_missing'
+              }));
+              lastLoginStatus = 'logged_out';
+              consecutiveLogoutChecks = 0;
+              return;
+            }
+          }
+          
+          // Hiç navigation elementi yoksa ve Instagram sayfasındaysa logout
+          if (!hasNavigation && !hasLoginForm) {
+            consecutiveLogoutChecks++;
+            if (consecutiveLogoutChecks >= 2 && lastLoginStatus === 'logged_in') {
+              UnfollowerChannel.postMessage(JSON.stringify({
+                status: 'logged_out',
+                reason: 'navigation_missing'
+              }));
+              lastLoginStatus = 'logged_out';
+              consecutiveLogoutChecks = 0;
+            }
+          }
+        }
+        
+        // Tamamen farklı bir domain'e yönlendirilmişse
+        if (!currentUrl.includes('instagram.com') && lastLoginStatus === 'logged_in') {
+          UnfollowerChannel.postMessage(JSON.stringify({
+            status: 'logged_out',
+            reason: 'redirected_away_from_instagram'
+          }));
+          lastLoginStatus = 'logged_out';
         }
         
       } catch (e) {
@@ -47,20 +163,80 @@ class JavaScriptConstants {
       }
     };
     
-    setInterval(checkLoginStatus, 2000);
+    // Daha sık kontrol et (özellikle logout anında)
+    setInterval(checkLoginStatus, 1000);
     
+    // URL değişikliklerini izle
     let lastUrl = window.location.href;
     const monitorUrlChanges = () => {
       const currentUrl = window.location.href;
       if (currentUrl !== lastUrl) {
         lastUrl = currentUrl;
-        setTimeout(checkLoginStatus, 500);
+        consecutiveLogoutChecks = 0; // URL değişince counter'ı sıfırla
+        setTimeout(checkLoginStatus, 200); // Hızlı kontrol
+        setTimeout(checkLoginStatus, 500); // Yedek kontrol
       }
     };
     
-    setInterval(monitorUrlChanges, 1000);
+    setInterval(monitorUrlChanges, 500);
     
+    // Sayfa yüklendiğinde hemen kontrol et
     checkLoginStatus();
+    
+    // MutationObserver ile DOM değişikliklerini izle
+    const observer = new MutationObserver((mutations) => {
+      let shouldCheck = false;
+      
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === 1) { // Element node
+              // Navigation veya form elementleri eklendiyse kontrol et
+              if (node.tagName === 'NAV' || 
+                  node.tagName === 'HEADER' ||
+                  node.tagName === 'FORM' ||
+                  node.tagName === 'BUTTON' ||
+                  (node.querySelector && node.querySelector('input[name="username"]')) ||
+                  (node.textContent && (node.textContent.includes('Open Instagram') ||
+                                       node.textContent.includes('Log in or sign up') ||
+                                       node.textContent.includes('Share everyday moments')))) {
+                shouldCheck = true;
+              }
+            }
+          });
+          
+          mutation.removedNodes.forEach(node => {
+            if (node.nodeType === 1) { // Element node
+              // Navigation elementleri kaldırıldıysa kontrol et
+              if (node.tagName === 'NAV' || 
+                  node.tagName === 'HEADER' ||
+                  (node.querySelector && (node.querySelector('nav') || node.querySelector('header')))) {
+                shouldCheck = true;
+              }
+            }
+          });
+        }
+      });
+      
+      if (shouldCheck) {
+        setTimeout(checkLoginStatus, 100);
+      }
+    });
+    
+    if (document.body) {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    } else {
+      // Body henüz yoksa bekle
+      document.addEventListener('DOMContentLoaded', () => {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      });
+    }
   ''';
 
   static const String loginCaptureCode = r'''
