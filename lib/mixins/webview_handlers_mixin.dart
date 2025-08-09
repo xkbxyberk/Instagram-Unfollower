@@ -216,8 +216,10 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     List<Map<String, dynamic>> fansList,
   ) async {
     try {
-      // Analytics servisine analiz tamamlandığını kaydet
-      await AnalyticsService.instance.recordAnalysis();
+      // Analytics servisine analiz tamamlandığını kaydet (hesap bilgisiyle)
+      if (currentUsername.isNotEmpty) {
+        await AnalyticsService.instance.recordAnalysis(currentUsername);
+      }
 
       // Sonuçları güncelle
       setState(() {

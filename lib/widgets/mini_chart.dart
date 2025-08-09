@@ -103,9 +103,10 @@ class _MiniChartState extends State<MiniChart>
                         ),
                       ),
                       const SizedBox(height: 4),
-                      // Day label
+                      // Day label - now using the localized day name from DailyUsageData
                       Text(
-                        dayData.dayName,
+                        dayData
+                            .dayName, // This now comes from analytics service with proper localization
                         style: TextStyle(
                           fontSize: 10,
                           color: isDark

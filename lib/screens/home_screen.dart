@@ -29,8 +29,8 @@ class HomeScreenState extends State<HomeScreen> {
     _loadDashboardData();
   }
 
-  Future<void> _loadDashboardData() async {
-    final state = await DashboardState.load();
+  Future<void> _loadDashboardData([String? account]) async {
+    final state = await DashboardState.load(account);
     if (mounted) {
       setState(() {
         _dashboardState = state;
@@ -42,7 +42,25 @@ class HomeScreenState extends State<HomeScreen> {
     setState(() {
       _dashboardState = _dashboardState.copyWith(isLoading: true);
     });
-    await _loadDashboardData();
+    await _loadDashboardData(_dashboardState.selectedAccount);
+  }
+
+  // Switch account
+  Future<void> _switchAccount(String? account) async {
+    setState(() {
+      _dashboardState = _dashboardState.copyWith(isLoading: true);
+    });
+
+    // If a specific account is selected, set it as current
+    // If null (All Accounts), clear the current account
+    if (account != null) {
+      await AnalyticsService.instance.setCurrentAccount(account);
+    } else {
+      await AnalyticsService.instance.clearCurrentAccount();
+    }
+
+    // Load data for the selected account (or combined if null)
+    await _loadDashboardData(account);
   }
 
   @override
@@ -82,8 +100,8 @@ class HomeScreenState extends State<HomeScreen> {
                 children: [
                   const SizedBox(height: 20),
 
-                  // Welcome Header
-                  _buildWelcomeHeader(isDark),
+                  // Welcome Header with compact account selector
+                  _buildWelcomeHeaderWithAccountSelector(isDark),
 
                   const SizedBox(height: 30),
 
@@ -114,42 +132,237 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildWelcomeHeader(bool isDark) {
+  Widget _buildWelcomeHeaderWithAccountSelector(bool isDark) {
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
-            colors: isDark
-                ? [
-                    DarkThemeColors.gradientColors[0],
-                    DarkThemeColors.gradientColors[4],
-                  ]
-                : [
-                    InstagramColors.gradientColors[0],
-                    InstagramColors.gradientColors[4],
-                  ],
-          ).createShader(bounds),
-          child: Text(
-            'welcome_back'.tr(),
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: -0.5,
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShaderMask(
+                    shaderCallback: (bounds) => LinearGradient(
+                      colors: [
+                        gradientColors[0],
+                        gradientColors[4],
+                      ],
+                    ).createShader(bounds),
+                    child: Text(
+                      'welcome_back'.tr(),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'dashboard_subtitle'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: ThemeColors.secondaryText(context),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'dashboard_subtitle'.tr(),
-          style: TextStyle(
-            fontSize: 16,
-            color: ThemeColors.secondaryText(context),
-            fontWeight: FontWeight.w400,
-          ),
+            // Compact Account Selector
+            if (_dashboardState.availableAccounts.isNotEmpty)
+              _buildCompactAccountSelector(isDark, gradientColors),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildCompactAccountSelector(bool isDark, List<Color> gradientColors) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            gradientColors[0].withValues(alpha: 0.1),
+            gradientColors[2].withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: gradientColors[0].withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: gradientColors[0].withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              _dashboardState.selectedAccount == null
+                  ? Icons.dashboard_outlined
+                  : Icons.person_outline,
+              color: gradientColors[3],
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 8),
+          PopupMenuButton<String?>(
+            onSelected: _switchAccount,
+            color: ThemeColors.card(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            offset: const Offset(0, 40),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _dashboardState.selectedAccount == null
+                          ? 'all_accounts'.tr()
+                          : '@${_dashboardState.selectedAccount}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: ThemeColors.primaryText(context),
+                      ),
+                    ),
+                    Text(
+                      'account_summary'.tr(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: ThemeColors.secondaryText(context),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  color: gradientColors[3],
+                  size: 16,
+                ),
+              ],
+            ),
+            itemBuilder: (BuildContext context) => [
+              // All accounts option
+              PopupMenuItem<String?>(
+                value: null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [gradientColors[0], gradientColors[2]],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.dashboard,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'all_accounts'.tr(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: ThemeColors.primaryText(context),
+                              ),
+                            ),
+                            Text(
+                              '${_dashboardState.availableAccounts.length} hesap',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: ThemeColors.secondaryText(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_dashboardState.selectedAccount == null)
+                        Icon(
+                          Icons.check,
+                          color: gradientColors[0],
+                          size: 16,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              // Individual accounts
+              ..._dashboardState.availableAccounts.map((account) {
+                final isSelected = _dashboardState.selectedAccount == account;
+                return PopupMenuItem<String?>(
+                  value: account,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.blue,
+                            size: 14,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '@$account',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: ThemeColors.primaryText(context),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isSelected)
+                          Icon(
+                            Icons.check,
+                            color: gradientColors[0],
+                            size: 16,
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
     );
   }
 

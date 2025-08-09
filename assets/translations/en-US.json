@@ -142,5 +142,18 @@
   "weekly_limit_approaching": "Approaching weekly limit ({}/10)",
   "use_responsibly": "Use responsibly to avoid Instagram limits",
   "take_a_break": "Take a break to avoid Instagram limits",
-  "recent_analysis_warning": "Recent analysis detected"
+  "recent_analysis_warning": "Recent analysis detected",
+  "day_monday": "Mon",
+  "day_tuesday": "Tue", 
+  "day_wednesday": "Wed",
+  "day_thursday": "Thu",
+  "day_friday": "Fri",
+  "day_saturday": "Sat",
+  "day_sunday": "Sun",
+  "account_analytics": "Account Analytics",
+  "select_account": "Select Account",
+  "all_accounts": "All Accounts",
+  "account_summary": "Account Summary",
+  "no_account_selected": "No account selected",
+  "switch_account": "Switch Account"
 }

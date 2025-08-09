@@ -142,5 +142,18 @@
   "weekly_limit_approaching": "Haftalık limite yaklaşıyorsunuz ({}/10)",
   "use_responsibly": "Instagram limitlerini aşmamak için sorumlu kullanın",
   "take_a_break": "Instagram limitlerini aşmamak için biraz ara verin",
-  "recent_analysis_warning": "Son zamanlarda analiz yapıldı"
+  "recent_analysis_warning": "Son zamanlarda analiz yapıldı",
+  "day_monday": "Pzt",
+  "day_tuesday": "Sal", 
+  "day_wednesday": "Çar",
+  "day_thursday": "Per",
+  "day_friday": "Cum",
+  "day_saturday": "Cmt",
+  "day_sunday": "Paz",
+  "account_analytics": "Hesap Analitiği",
+  "select_account": "Hesap Seç",
+  "all_accounts": "Tüm Hesaplar",
+  "account_summary": "Hesap Özeti",
+  "no_account_selected": "Hesap seçilmedi",
+  "switch_account": "Hesap Değiştir"
 }
