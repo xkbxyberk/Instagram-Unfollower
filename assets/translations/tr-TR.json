@@ -155,5 +155,11 @@
   "all_accounts": "Tüm Hesaplar",
   "account_summary": "Hesap Özeti",
   "no_account_selected": "Hesap seçilmedi",
-  "switch_account": "Hesap Değiştir"
+  "switch_account": "Hesap Değiştir",
+  "ad_loading": "Reklam yükleniyor...",
+  "ad_loading_desc": "Analiz sonuçlarını görmek için lütfen kısa reklamı izleyin",
+  "ad_failed": "Reklam gösterilemedi",
+  "ad_failed_desc": "Reklam yüklenemedi, analiz devam ediyor...",
+  "free_analysis": "Ücretsiz Analiz",
+  "watch_ad_to_continue": "Devam etmek için reklam izleyin"
 }

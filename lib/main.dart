@@ -288,6 +288,6 @@ class StartupScreen extends StatelessWidget {
   Future<bool> _checkFirstLaunch() async {
     final prefs = await SharedPreferences.getInstance();
     final completed = prefs.getBool('onboarding_completed') ?? false;
-    return !completed; // İlk açılış = onboarding tamamlanmamış
+    return !completed;
   }
 }

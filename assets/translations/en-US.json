@@ -155,5 +155,11 @@
   "all_accounts": "All Accounts",
   "account_summary": "Account Summary",
   "no_account_selected": "No account selected",
-  "switch_account": "Switch Account"
+  "switch_account": "Switch Account",
+  "ad_loading": "Loading ad...",
+  "ad_loading_desc": "Please watch the short ad to see analysis results",
+  "ad_failed": "Ad could not be shown",
+  "ad_failed_desc": "Ad could not be loaded, continuing with analysis...",
+  "free_analysis": "Free Analysis",
+  "watch_ad_to_continue": "Watch ad to continue"
 }
