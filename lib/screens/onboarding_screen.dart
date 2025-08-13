@@ -176,6 +176,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ? DarkThemeColors.gradientColors
         : InstagramColors.gradientColors;
 
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLandscape = screenWidth > screenHeight;
+
     final pages = [
       OnboardingPage(
         icon: Icons.waving_hand_outlined,
@@ -257,14 +261,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-          // Content
+          // Content with SingleChildScrollView
           SafeArea(
             child: Column(
               children: [
                 // Skip button - sadece son sayfa değilse göster
                 if (_currentPage < pages.length - 1)
-                  Padding(
-                    padding: const EdgeInsets.all(20),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -292,7 +298,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
 
-                // Page view
+                // Page view with flexible height
                 Expanded(
                   child: PageView.builder(
                     controller: _pageController,
@@ -306,15 +312,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     },
                     itemCount: pages.length,
                     itemBuilder: (context, index) {
-                      return _buildPage(pages[index]);
+                      return SingleChildScrollView(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isLandscape ? 40 : 30,
+                          vertical: isLandscape ? 10 : 20,
+                        ),
+                        child: _buildPage(pages[index], isLandscape),
+                      );
                     },
                   ),
                 ),
 
-                // Bottom controls
-                Padding(
-                  padding: const EdgeInsets.all(30),
+                // Bottom controls with fixed height
+                Container(
+                  padding: EdgeInsets.all(isLandscape ? 20 : 30),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // Page indicators
                       Row(
@@ -346,7 +359,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 30),
+                      SizedBox(height: isLandscape ? 20 : 30),
 
                       // Navigation buttons
                       Row(
@@ -374,8 +387,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(15),
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: isLandscape ? 12 : 16),
                                   ),
                                   child: Text(
                                     'previous'.tr(),
@@ -412,8 +425,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(15),
                                   ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: isLandscape ? 12 : 16),
                                   elevation: 0,
                                 ),
                                 child: Text(
@@ -480,15 +493,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Widget _buildPage(OnboardingPage page) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
+  Widget _buildPage(OnboardingPage page, bool isLandscape) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Responsive boyutlar
+    final iconSize = isLandscape ? 60.0 : 80.0;
+    final titleSize = isLandscape ? 24.0 : 28.0;
+    final descSize = isLandscape ? 14.0 : 16.0;
+    final spacing = isLandscape ? 20.0 : 30.0;
+    final smallSpacing = isLandscape ? 10.0 : 20.0;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: screenHeight * 0.5, // Minimum yükseklik
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Icon
           Container(
-            padding: const EdgeInsets.all(30),
+            padding: EdgeInsets.all(isLandscape ? 20 : 30),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
@@ -506,22 +531,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: Icon(
               page.icon,
-              size: 80,
+              size: iconSize,
               color: Colors.white,
             ),
           ),
 
-          const SizedBox(height: 40),
+          SizedBox(height: spacing),
 
           // Title
           Text(
             page.title.tr(),
-            style: const TextStyle(
-              fontSize: 28,
+            style: TextStyle(
+              fontSize: titleSize,
               fontWeight: FontWeight.bold,
               color: Colors.white,
               height: 1.2,
-              shadows: [
+              shadows: const [
                 Shadow(
                   color: Colors.black26,
                   offset: Offset(0, 2),
@@ -532,13 +557,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: smallSpacing),
 
           // Description
           Text(
             page.description.tr(),
             style: TextStyle(
-              fontSize: 16,
+              fontSize: descSize,
               color: Colors.white.withValues(alpha: 0.9),
               height: 1.5,
               shadows: const [
@@ -554,7 +579,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           // Learn More button (gizlilik ve güvenlik sayfalarında)
           if (page.showLearnMore) ...[
-            const SizedBox(height: 20),
+            SizedBox(height: smallSpacing),
             TextButton.icon(
               onPressed: page.onLearnMore,
               style: TextButton.styleFrom(
@@ -584,133 +609,142 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           // Risk information (only for the last page)
           if (page.isRiskPage) ...[
-            const SizedBox(height: 30),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'onboarding_risk_title'.tr(),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    'onboarding_risk_1'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'onboarding_risk_2'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'onboarding_risk_3'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'onboarding_risk_4'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  InkWell(
-                    onTap: () {
-                      setState(() {
-                        _riskAccepted = !_riskAccepted;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: _riskAccepted
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 2,
-                              ),
-                              boxShadow: _riskAccepted
-                                  ? [
-                                      BoxShadow(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: _riskAccepted
-                                ? Icon(
-                                    Icons.check,
-                                    size: 18,
-                                    color: page.gradient.first,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'onboarding_checkbox'.tr(),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            SizedBox(height: spacing),
+            _buildRiskSection(isLandscape),
+            SizedBox(height: smallSpacing),
+            _buildCheckboxSection(isLandscape, page),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildRiskSection(bool isLandscape) {
+    return Container(
+      padding: EdgeInsets.all(isLandscape ? 16 : 20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'onboarding_risk_title'.tr(),
+            style: TextStyle(
+              fontSize: isLandscape ? 16 : 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: isLandscape ? 10 : 15),
+
+          // Risk items with smaller spacing
+          _buildRiskItem('onboarding_risk_1'.tr(), isLandscape),
+          SizedBox(height: isLandscape ? 6 : 8),
+          _buildRiskItem('onboarding_risk_2'.tr(), isLandscape),
+          SizedBox(height: isLandscape ? 6 : 8),
+          _buildRiskItem('onboarding_risk_3'.tr(), isLandscape),
+          SizedBox(height: isLandscape ? 6 : 8),
+          _buildRiskItem('onboarding_risk_4'.tr(), isLandscape),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckboxSection(bool isLandscape, OnboardingPage page) {
+    return Container(
+      padding: EdgeInsets.all(isLandscape ? 12 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _riskAccepted = !_riskAccepted;
+          });
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: _riskAccepted ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                  boxShadow: _riskAccepted
+                      ? [
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: _riskAccepted
+                    ? Icon(
+                        Icons.check,
+                        size: 18,
+                        color: page.gradient.first,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'onboarding_checkbox'.tr(),
+                  style: TextStyle(
+                    fontSize: isLandscape ? 14 : 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRiskItem(String text, bool isLandscape) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: isLandscape ? 12 : 14,
+        color: Colors.white.withValues(alpha: 0.9),
+        height: 1.4,
       ),
     );
   }
