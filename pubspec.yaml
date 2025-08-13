@@ -1,5 +1,5 @@
-name: instagram_unfollower_app
-description: "Instagram Unfollower Analyzer App"
+name: unfollower_reports_app
+description: "Unfollower Reports for Instagram - Instagram Analyzer App"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -15,6 +15,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.2
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +28,10 @@ flutter:
   assets:
     - assets/translations/
     - assets/images/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.instagram_unfollower_app"
+    namespace = "com.example.unfollower_reports_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
