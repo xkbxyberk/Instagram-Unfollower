@@ -6,6 +6,137 @@ import '../utils/dark_theme_colors.dart';
 class SecurityScreen extends StatelessWidget {
   const SecurityScreen({super.key});
 
+  // Teknik detay popup'ı göster
+  void _showTechnicalDetailsPopup(
+    BuildContext context,
+    String titleKey,
+    String contentKey,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 450, maxHeight: 600),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  gradientColors[0].withValues(alpha: 0.9),
+                  gradientColors[2].withValues(alpha: 0.9),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.security_outlined,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          titleKey.tr(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Flexible(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Text(
+                        contentKey.tr(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: isDark
+                              ? DarkThemeColors.primaryText
+                                  .withValues(alpha: 0.8)
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Close button
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: Text(
+                        'close'.tr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -48,6 +179,12 @@ class SecurityScreen extends StatelessWidget {
                   description: 'how_it_works_desc'.tr(),
                   color: Colors.blue,
                   isDark: isDark,
+                  showLearnMore: true,
+                  onLearnMore: () => _showTechnicalDetailsPopup(
+                    context,
+                    'how_it_works_technical',
+                    'how_it_works_technical_content',
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -133,6 +270,8 @@ class SecurityScreen extends StatelessWidget {
     required String description,
     required Color color,
     required bool isDark,
+    bool showLearnMore = false,
+    VoidCallback? onLearnMore,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -180,6 +319,34 @@ class SecurityScreen extends StatelessWidget {
               height: 1.5,
             ),
           ),
+          if (showLearnMore && onLearnMore != null) ...[
+            const SizedBox(height: 15),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onLearnMore,
+                style: TextButton.styleFrom(
+                  backgroundColor: color.withValues(alpha: 0.1),
+                  foregroundColor: color,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: const Icon(Icons.info_outline, size: 16),
+                label: Text(
+                  'learn_more'.tr(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -234,6 +401,36 @@ class SecurityScreen extends StatelessWidget {
           ),
           const SizedBox(height: 15),
           ..._buildTipsList(context, isDark),
+          const SizedBox(height: 15),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => _showTechnicalDetailsPopup(
+                context,
+                'safety_tips_technical',
+                'safety_tips_technical_content',
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange.withValues(alpha: 0.1),
+                foregroundColor: Colors.orange,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.info_outline, size: 16),
+              label: Text(
+                'learn_more'.tr(),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -327,6 +524,36 @@ class SecurityScreen extends StatelessWidget {
           ),
           const SizedBox(height: 15),
           ..._buildPrivacyList(context, isDark),
+          const SizedBox(height: 15),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => _showTechnicalDetailsPopup(
+                context,
+                'data_privacy_technical',
+                'data_privacy_technical_content',
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.green.withValues(alpha: 0.1),
+                foregroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.info_outline, size: 16),
+              label: Text(
+                'learn_more'.tr(),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

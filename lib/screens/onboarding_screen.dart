@@ -20,7 +20,153 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    // Theme.of(context) çağrısını initState'den kaldırdık
+  }
+
+  // Teknik detay popup'ı göster
+  void _showTechnicalDetailsPopup(
+      String titleKey, String contentKey, int pageIndex) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? DarkThemeColors.gradientColors
+        : InstagramColors.gradientColors;
+
+    // Sayfa indeksine göre popup renklerini ayarla
+    List<Color> popupColors;
+    switch (pageIndex) {
+      case 2: // Gizlilik sayfası
+        popupColors = [
+          gradientColors[4].withValues(alpha: 0.9),
+          gradientColors[6].withValues(alpha: 0.9),
+        ];
+        break;
+      case 3: // Güvenlik sayfası
+        popupColors = [
+          gradientColors[6].withValues(alpha: 0.9),
+          gradientColors[8].withValues(alpha: 0.9),
+        ];
+        break;
+      default:
+        popupColors = [
+          gradientColors[0].withValues(alpha: 0.9),
+          gradientColors[2].withValues(alpha: 0.9),
+        ];
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: popupColors,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.info_outline,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          titleKey.tr(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Flexible(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Text(
+                        contentKey.tr(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: isDark
+                              ? DarkThemeColors.primaryText
+                                  .withValues(alpha: 0.8)
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Close button
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: Text(
+                        'close'.tr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -30,7 +176,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ? DarkThemeColors.gradientColors
         : InstagramColors.gradientColors;
 
-    // Pages'i build metodunda oluşturuyoruz
     final pages = [
       OnboardingPage(
         icon: Icons.waving_hand_outlined,
@@ -58,6 +203,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           gradientColors[4],
           gradientColors[6],
         ],
+        showLearnMore: true,
+        onLearnMore: () => _showTechnicalDetailsPopup(
+          'privacy_technical_title',
+          'privacy_technical_content',
+          2, // Gizlilik sayfası indeksi
+        ),
       ),
       OnboardingPage(
         icon: Icons.info_outline,
@@ -68,6 +219,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           gradientColors[8],
         ],
         isRiskPage: true,
+        showLearnMore: true,
+        onLearnMore: () => _showTechnicalDetailsPopup(
+          'security_technical_title',
+          'security_technical_content',
+          3, // Güvenlik sayfası indeksi
+        ),
       ),
     ];
 
@@ -145,10 +302,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         if (index < pages.length - 1) {
                           _riskAccepted = false;
                         }
-                        // Sayfalar değiştiğinde gradientleri güncelle
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          // Artık _initializePages'e gerek yok
-                        });
                       });
                     },
                     itemCount: pages.length,
@@ -290,7 +443,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _skipToRiskPage(List<OnboardingPage> pages) {
     _pageController.animateToPage(
-      pages.length - 1, // Son sayfaya (risk kabul sayfası) git
+      pages.length - 1,
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
     );
@@ -398,6 +551,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             textAlign: TextAlign.center,
           ),
+
+          // Learn More button (gizlilik ve güvenlik sayfalarında)
+          if (page.showLearnMore) ...[
+            const SizedBox(height: 20),
+            TextButton.icon(
+              onPressed: page.onLearnMore,
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.15),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.3),
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.info_outline, size: 18),
+              label: Text(
+                'learn_more'.tr(),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
 
           // Risk information (only for the last page)
           if (page.isRiskPage) ...[
@@ -539,6 +722,8 @@ class OnboardingPage {
   final String description;
   final List<Color> gradient;
   final bool isRiskPage;
+  final bool showLearnMore;
+  final VoidCallback? onLearnMore;
 
   OnboardingPage({
     required this.icon,
@@ -546,5 +731,7 @@ class OnboardingPage {
     required this.description,
     required this.gradient,
     this.isRiskPage = false,
+    this.showLearnMore = false,
+    this.onLearnMore,
   });
 }
