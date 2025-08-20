@@ -239,8 +239,224 @@ class JavaScriptConstants {
     }
   ''';
 
-  static const String loginCaptureCode = r'''
-    const captureUsername = () => {
+  static const String activeUserDetectionCode = r'''
+    let currentActiveUser = null;
+    let lastCapturedUser = null;
+    let userDetectionInterval = null;
+    
+    // Aktif kullanıcıyı yakalama fonksiyonu
+    const detectActiveUser = () => {
+      try {
+        let detectedUsername = null;
+        
+        // Yöntem 1: Navigation bar'daki profil linkinden
+        const profileLinks = document.querySelectorAll('a[href*="/"]');
+        for (const link of profileLinks) {
+          const href = link.getAttribute('href');
+          if (href && href.match(/^\/[a-zA-Z0-9._]{1,30}\/?$/)) {
+            const username = href.replace(/\//g, '');
+            // Bu kendi profilinin linki mi kontrol et
+            const parentElement = link.closest('[role="navigation"], nav, header');
+            if (parentElement && link.querySelector('img[alt*="profile picture"]')) {
+              detectedUsername = username;
+              break;
+            }
+          }
+        }
+        
+        // Yöntem 2: Settings/Profile sayfalarından
+        if (!detectedUsername) {
+          const currentUrl = window.location.href;
+          if (currentUrl.includes('/accounts/edit/') || currentUrl.includes('/accounts/')) {
+            const usernameInputs = document.querySelectorAll('input[value]');
+            for (const input of usernameInputs) {
+              const value = input.value;
+              if (value && value.match(/^[a-zA-Z0-9._]{1,30}$/)) {
+                detectedUsername = value;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Yöntem 3: URL'den direkt çekme (kendi profil sayfasında)
+        if (!detectedUsername) {
+          const currentUrl = window.location.href;
+          const profileMatch = currentUrl.match(/instagram\.com\/([a-zA-Z0-9._]{1,30})\/?$/);
+          if (profileMatch) {
+            const username = profileMatch[1];
+            // Bu sayfada "Edit profile" butonu varsa, bu kullanıcının kendi profili
+            const editButton = document.querySelector('a[href="/accounts/edit/"], button:contains("Edit profile")');
+            if (editButton) {
+              detectedUsername = username;
+            }
+          }
+        }
+        
+        // Yöntem 4: Instagram'ın internal data'sından
+        if (!detectedUsername) {
+          try {
+            // window._sharedData veya benzeri global objeler
+            if (window._sharedData && window._sharedData.config && window._sharedData.config.viewer) {
+              detectedUsername = window._sharedData.config.viewer.username;
+            }
+          } catch (e) {
+            // Sessizce geç
+          }
+        }
+        
+        // Yöntem 5: DOM'daki data attributelerinden
+        if (!detectedUsername) {
+          const userElements = document.querySelectorAll('[data-username], [data-testid*="user"]');
+          for (const element of userElements) {
+            const username = element.getAttribute('data-username') || element.textContent;
+            if (username && username.match(/^[a-zA-Z0-9._]{1,30}$/)) {
+              detectedUsername = username;
+              break;
+            }
+          }
+        }
+        
+        // Kullanıcı değişimi kontrolü
+        if (detectedUsername && detectedUsername !== lastCapturedUser) {
+          lastCapturedUser = detectedUsername;
+          currentActiveUser = detectedUsername;
+          
+          // Local storage'a kaydet
+          try {
+            localStorage.setItem('captured_instagram_username', detectedUsername);
+          } catch (e) {
+            // Storage hatası - sessizce geç
+          }
+          
+          // Flutter'a bildir
+          try {
+            if (typeof UnfollowerChannel !== 'undefined') {
+              UnfollowerChannel.postMessage(JSON.stringify({
+                status: 'active_user_detected',
+                username: detectedUsername,
+                timestamp: Date.now(),
+                method: 'auto_detection'
+              }));
+            }
+          } catch (e) {
+            console.log('Channel error:', e);
+          }
+          
+          console.log('Active user detected:', detectedUsername);
+        }
+        
+        return detectedUsername;
+        
+      } catch (error) {
+        console.log('User detection error:', error);
+        return null;
+      }
+    };
+    
+    // Sürekli kullanıcı kontrolü
+    const startUserDetection = () => {
+      // İlk kontrol
+      detectActiveUser();
+      
+      // Periyodik kontrol (her 3 saniyede bir)
+      if (userDetectionInterval) {
+        clearInterval(userDetectionInterval);
+      }
+      
+      userDetectionInterval = setInterval(() => {
+        const currentUrl = window.location.href;
+        if (currentUrl.includes('instagram.com') && !currentUrl.includes('login')) {
+          detectActiveUser();
+        }
+      }, 3000);
+    };
+    
+    // URL değişikliklerini izle
+    let lastDetectionUrl = window.location.href;
+    const monitorUrlForUserDetection = () => {
+      const currentUrl = window.location.href;
+      if (currentUrl !== lastDetectionUrl) {
+        lastDetectionUrl = currentUrl;
+        
+        // URL değiştiğinde 1 saniye sonra kontrol et
+        setTimeout(() => {
+          detectActiveUser();
+        }, 1000);
+      }
+    };
+    
+    setInterval(monitorUrlForUserDetection, 1000);
+    
+    // DOM değişikliklerini izle
+    const observeForUserChanges = () => {
+      const observer = new MutationObserver((mutations) => {
+        let shouldCheck = false;
+        
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1) {
+                // Navigation, profile veya user-related elementler eklendiyse
+                if (node.tagName === 'NAV' || 
+                    node.tagName === 'HEADER' ||
+                    node.querySelector && (
+                      node.querySelector('img[alt*="profile picture"]') ||
+                      node.querySelector('a[href*="/accounts/"]') ||
+                      node.querySelector('[data-username]')
+                    )) {
+                  shouldCheck = true;
+                }
+              }
+            });
+          }
+        });
+        
+        if (shouldCheck) {
+          setTimeout(detectActiveUser, 500);
+        }
+      });
+      
+      if (document.body) {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
+    };
+    
+    // Başlat
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        startUserDetection();
+        observeForUserChanges();
+      });
+    } else {
+      startUserDetection();
+      observeForUserChanges();
+    }
+    
+    // Manuel tetikleme fonksiyonu
+    window.triggerUserDetection = () => {
+      return detectActiveUser();
+    };
+    
+    // Mevcut kullanıcıyı al fonksiyonu
+    window.getCurrentActiveUser = () => {
+      return currentActiveUser;
+    };
+  ''';
+
+  static const String enhancedLoginCaptureCode = r'''
+    const captureUsernameEnhanced = () => {
+      // Önce aktif kullanıcıyı kontrol et
+      const activeUser = window.getCurrentActiveUser && window.getCurrentActiveUser();
+      if (activeUser) {
+        handleUsernameCapture('active_user_check', activeUser);
+        return;
+      }
+      
+      // Sonra login formunu kontrol et
       const universalSelectors = [
         'input[name="username"][maxlength="75"][type="text"]',
         'input[name="username"][autocapitalize="off"]',
@@ -251,14 +467,11 @@ class JavaScriptConstants {
       ];
       
       let usernameInput = null;
-      let foundSelector = '';
-      
       for (const selector of universalSelectors) {
         try {
           const inputs = document.querySelectorAll(selector);
           if (inputs.length > 0) {
             usernameInput = inputs[0];
-            foundSelector = selector;
             break;
           }
         } catch (e) {
@@ -266,185 +479,35 @@ class JavaScriptConstants {
         }
       }
       
-      if (usernameInput) {
-        const isInstagramInput = 
-          usernameInput.name === 'username' && 
-          usernameInput.maxLength === 75 && 
-          usernameInput.type === 'text';
-      } else {
-        const allTextInputs = document.querySelectorAll('input[type="text"]');
-        usernameInput = Array.from(allTextInputs).find(input => 
-          input.name === 'username' || 
-          input.maxLength === 75 ||
-          (input.getAttribute('aria-label') && 
-           (input.getAttribute('aria-label').toLowerCase().includes('username') ||
-            input.getAttribute('aria-label').toLowerCase().includes('kullanıcı')))
-        );
+      if (usernameInput && usernameInput.value) {
+        handleUsernameCapture('login_form', usernameInput.value.trim());
       }
-      
-      if (usernameInput) {
-        let capturedUsername = '';
-        let lastCapturedValue = '';
-        
-        const handleInput = (eventType, value) => {
-          if (value && value.length > 0 && value !== lastCapturedValue) {
-            capturedUsername = value;
-            lastCapturedValue = value;
-            
-            localStorage.setItem('captured_instagram_username', capturedUsername);
-            
-            try {
-              if (typeof UnfollowerChannel !== 'undefined') {
-                UnfollowerChannel.postMessage(JSON.stringify({
-                  status: 'username_captured',
-                  username: capturedUsername,
-                  capturedBy: eventType
-                }));
-              }
-            } catch (e) {
-            }
-          }
-        };
-        
-        const createEventHandler = (eventType) => {
-          return (e) => {
-            const value = e.target.value.trim();
-            handleInput(eventType, value);
-          };
-        };
-        
-        const criticalEvents = [
-          'input',
-          'change',
-          'blur',
-          'keyup',
-          'paste',
-        ];
-        
-        criticalEvents.forEach(eventType => {
-          usernameInput.addEventListener(eventType, createEventHandler(eventType), true);
-        });
-        
-        const form = usernameInput.closest('form');
-        if (form) {
-          form.addEventListener('submit', (e) => {
-            const finalUsername = usernameInput.value.trim();
-            
-            if (finalUsername) {
-              handleInput('form-submit', finalUsername);
-              
-              setTimeout(() => {
-                localStorage.setItem('captured_instagram_username', finalUsername);
-              }, 100);
-            }
-          }, true);
-        }
-        
-        if (usernameInput.value && usernameInput.value.trim()) {
-          handleInput('initial-value', usernameInput.value.trim());
-        }
-        
-        let checkCount = 0;
-        const maxChecks = 60;
-        
-        const intervalId = setInterval(() => {
-          checkCount++;
-          const currentValue = usernameInput.value ? usernameInput.value.trim() : '';
+    };
+    
+    const handleUsernameCapture = (method, username) => {
+      if (username && username.length > 0) {
+        try {
+          localStorage.setItem('captured_instagram_username', username);
           
-          if (currentValue && currentValue !== lastCapturedValue) {
-            handleInput('periodic-check', currentValue);
+          if (typeof UnfollowerChannel !== 'undefined') {
+            UnfollowerChannel.postMessage(JSON.stringify({
+              status: 'username_captured',
+              username: username,
+              method: method,
+              timestamp: Date.now()
+            }));
           }
-          
-          if (checkCount >= maxChecks) {
-            clearInterval(intervalId);
-          }
-        }, 500);
-      }
-    };
-    
-    const waitForUsernameInput = () => {
-      captureUsername();
-      
-      const retryTimeouts = [
-        { delay: 200, reason: 'Instant loading' },
-        { delay: 600, reason: 'Fast loading' },
-        { delay: 1200, reason: 'Normal loading' },
-        { delay: 2500, reason: 'Slow loading' },
-        { delay: 4000, reason: 'Last chance' }
-      ];
-      
-      retryTimeouts.forEach(({ delay, reason }) => {
-        setTimeout(() => {
-          captureUsername();
-        }, delay);
-      });
-    };
-    
-    let lastUrl = window.location.href;
-    const checkUrlChange = () => {
-      const currentUrl = window.location.href;
-      if (currentUrl !== lastUrl) {
-        lastUrl = currentUrl;
-        
-        if (currentUrl.includes('login') || currentUrl.includes('accounts')) {
-          setTimeout(() => {
-            captureUsername();
-          }, 300);
+        } catch (e) {
+          console.log('Username capture error:', e);
         }
       }
     };
     
-    setInterval(checkUrlChange, 1000);
+    // Gelişmiş yakalama başlat
+    captureUsernameEnhanced();
     
-    const observer = new MutationObserver((mutations) => {
-      let shouldRecheck = false;
-      
-      mutations.forEach((mutation) => {
-        if (mutation.addedNodes.length > 0) {
-          mutation.addedNodes.forEach(node => {
-            if (node.nodeType === 1) {
-              if (node.tagName === 'INPUT' ||
-                  node.tagName === 'FORM' ||
-                  (node.querySelector && 
-                   node.querySelector('input[name="username"]'))) {
-                shouldRecheck = true;
-              }
-            }
-          });
-        }
-        
-        if (mutation.type === 'attributes' && 
-            mutation.target.tagName === 'INPUT' &&
-            ['name', 'maxlength', 'aria-label'].includes(mutation.attributeName)) {
-          shouldRecheck = true;
-        }
-      });
-      
-      if (shouldRecheck) {
-        setTimeout(captureUsername, 150);
-      }
-    });
-    
-    if (document.body) {
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['name', 'maxlength', 'aria-label', 'class']
-      });
-    }
-    
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(captureUsername, 100);
-      });
-    }
-    
-    window.addEventListener('load', () => {
-      setTimeout(captureUsername, 250);
-    });
-    
-    waitForUsernameInput();
+    // Periyodik kontrol
+    setInterval(captureUsernameEnhanced, 2000);
   ''';
 
   static const String analysisJavaScriptCode = r'''
@@ -545,24 +608,35 @@ class JavaScriptConstants {
       return { notFollowingBack, fans };
     };
 
-    async function analyzeAccount(username = null) {
+    async function analyzeAccountEnhanced(username = null) {
       try {
         let targetUsername = username;
         
+        // 1. Parametre olarak gelen username'i kullan
         if (!targetUsername) {
+          // 2. Aktif kullanıcıyı kontrol et
+          targetUsername = window.getCurrentActiveUser && window.getCurrentActiveUser();
+        }
+        
+        if (!targetUsername) {
+          // 3. Local storage'dan al
           targetUsername = localStorage.getItem('captured_instagram_username');
         }
         
         if (!targetUsername) {
+          // 4. Son çare: manuel giriş iste
           UnfollowerChannel.postMessage(JSON.stringify({
-            status: 'need_manual_input'
+            status: 'need_manual_input',
+            reason: 'no_username_detected'
           }));
           return;
         }
         
+        // Username tespit edildi, analizi başlat
         UnfollowerChannel.postMessage(JSON.stringify({
-          status: 'username',
-          username: targetUsername
+          status: 'username_confirmed',
+          username: targetUsername,
+          source: 'auto_detection'
         }));
         
         const result = await getUserFriendshipStats(targetUsername);
@@ -572,6 +646,9 @@ class JavaScriptConstants {
         UnfollowerChannel.postMessage('{"error":"' + e.message + '"}');
       }
     }
+
+    // Global fonksiyon override
+    window.analyzeAccount = analyzeAccountEnhanced;
 
     function clearStoredUsername() {
       localStorage.removeItem('captured_instagram_username');

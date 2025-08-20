@@ -140,6 +140,8 @@ class _WebViewScreenState extends State<WebViewScreen>
                 onClearError: clearError,
                 onToggleUserSelection: toggleUserSelection,
                 onOpenUserProfile: openUserProfile,
+                onShowManualInput: switchToManualInput,
+                onRetriggerDetection: retriggerUserDetection,
                 // Panel state preservation
                 initialTabIndex: currentTabIndex,
                 initialSearchQuery: searchQuery,

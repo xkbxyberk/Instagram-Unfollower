@@ -86,18 +86,96 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     try {
       final decodedMessage = jsonDecode(message.message);
       if (decodedMessage is Map) {
-        switch (decodedMessage['status']) {
+        // Map<String, dynamic> tipine güvenli cast
+        final messageMap = Map<String, dynamic>.from(decodedMessage);
+
+        switch (messageMap['status']) {
           case 'logged_out':
             handleLogout();
             break;
+
           case 'logged_in_confirmed':
             if (!isLoggedIn) {
               handleLogin();
             }
             break;
+
+          case 'active_user_detected':
+            // YENİ: Aktif kullanıcı otomatik tespit edildi
+            handleActiveUserDetected(messageMap);
+            break;
+
+          case 'username_confirmed':
+            // YENİ: Username onaylandı, direkt analize geç
+            setState(() {
+              currentUsername = messageMap['username'] ?? '';
+              showManualInput = false; // Manuel girişi kapat
+            });
+            break;
+
+          case 'username_captured':
+            // Geliştirilmiş: Yakalama metodunu da kontrol et
+            final method = messageMap['method'] ?? 'unknown';
+            final username = messageMap['username'] ?? '';
+
+            setState(() {
+              currentUsername = username;
+              if (method == 'auto_detection') {
+                // Otomatik tespit edildiyse, manuel girişi kapat
+                showManualInput = false;
+              }
+            });
+
+            // Analytics'e kaydet (eğer login durumundaysa)
+            if (isLoggedIn && method == 'auto_detection') {
+              _recordUserDetection(username, method);
+            }
+            break;
+
+          case 'need_manual_input':
+            // Manuel giriş gerekli
+            final reason = messageMap['reason'] ?? 'unknown';
+            setState(() {
+              showManualInput = true;
+              isLoading = false;
+              errorMessage = '';
+            });
+
+            // Kullanıcıya bilgi ver
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.info, color: Colors.white),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          reason == 'no_username_detected'
+                              ? 'Hesap bilgisi tespit edilemedi, lütfen manuel olarak girin'
+                              : 'Kullanıcı adı gerekli',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: Colors.orange.shade600,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+
+            // Panel'i aç
+            openPanel();
+            break;
+
           case 'progress':
             setState(() {
-              String progressKey = decodedMessage['message'];
+              String progressKey = messageMap['message'] ?? '';
               if (progressKey.contains('Loading followers')) {
                 progressMessage = 'loading_followers'.tr();
               } else if (progressKey.contains('Loading following')) {
@@ -107,38 +185,21 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
               } else if (progressKey.contains('Getting user info')) {
                 progressMessage = 'getting_user_info'.tr();
               } else {
-                progressMessage = decodedMessage['message'];
+                progressMessage = progressKey;
               }
             });
             break;
-          case 'username_captured':
-            setState(() {
-              currentUsername = decodedMessage['username'];
-            });
-            break;
-          case 'username':
-            setState(() {
-              currentUsername = decodedMessage['username'];
-            });
-            break;
-          case 'need_manual_input':
-            setState(() {
-              showManualInput = true;
-              isLoading = false;
-            });
-            openPanel();
-            break;
+
           default:
-            if (decodedMessage.containsKey('error')) {
+            if (messageMap.containsKey('error')) {
               setState(() {
                 isLoading = false;
-                errorMessage = decodedMessage['error'];
+                errorMessage = messageMap['error'] ?? 'Unknown error';
                 progressMessage = '';
               });
-            } else if (decodedMessage.containsKey('notFollowingBack') ||
-                decodedMessage.containsKey('fans')) {
-              // Yeni analiz sonuçları geldi
-              _handleAnalysisResults(Map<String, dynamic>.from(decodedMessage));
+            } else if (messageMap.containsKey('notFollowingBack') ||
+                messageMap.containsKey('fans')) {
+              _handleAnalysisResults(messageMap);
             }
         }
       }
@@ -148,6 +209,60 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
         errorMessage = 'data_retrieval_error'.tr();
         progressMessage = '';
       });
+    }
+  }
+
+  // YENİ: Aktif kullanıcı tespit edildiğinde çağrılır
+  void handleActiveUserDetected(Map<String, dynamic> data) {
+    final username = data['username'] as String? ?? '';
+    final method = data['method'] ?? 'auto_detection';
+
+    setState(() {
+      currentUsername = username;
+      showManualInput =
+          false; // Otomatik tespit edildiği için manuel girişi kapat
+    });
+
+    // Başarı mesajı göster
+    if (mounted && isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Hesap tespit edildi: @$username',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    // Analytics'e kaydet
+    _recordUserDetection(username, method);
+  }
+
+  // YENİ: Kullanıcı tespitini analytics'e kaydet
+  Future<void> _recordUserDetection(String username, String method) async {
+    try {
+      // Bu sadece tespit, henüz analiz yapılmadı
+      // İsteğe bağlı olarak tespit edilen kullanıcıları kaydedebilirsiniz
+
+      // Debug için konsola yazdır (print yerine debugPrint kullan)
+      debugPrint('User detected: $username via $method');
+    } catch (e) {
+      // Sessizce geç
     }
   }
 
@@ -286,11 +401,19 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
 
     if (url.contains('accounts/login') ||
         url.contains('accounts/emailsignup')) {
-      controller.runJavaScript(JavaScriptConstants.loginCaptureCode);
+      controller.runJavaScript(JavaScriptConstants.enhancedLoginCaptureCode);
     } else if (url.contains('https://www.instagram.com/') &&
         !url.contains('accounts/login') &&
         !url.contains('accounts/emailsignup')) {
+      // Instagram ana sayfalarında aktif kullanıcı tespitini çalıştır
+      controller.runJavaScript(JavaScriptConstants.activeUserDetectionCode);
       controller.runJavaScript(JavaScriptConstants.analysisJavaScriptCode);
+
+      // 2 saniye sonra kullanıcı tespitini tetikle
+      Future.delayed(const Duration(seconds: 2), () {
+        controller.runJavaScript(
+            'if (window.triggerUserDetection) window.triggerUserDetection();');
+      });
     }
   }
 
@@ -299,11 +422,18 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
       isLoggedIn = true;
     });
 
+    // Gelişmiş JavaScript kodlarını çalıştır
+    controller.runJavaScript(JavaScriptConstants.activeUserDetectionCode);
+    controller.runJavaScript(JavaScriptConstants.enhancedLoginCaptureCode);
     controller.runJavaScript(JavaScriptConstants.analysisJavaScriptCode);
 
     Future.delayed(const Duration(milliseconds: 800), () {
       slideInController.forward();
       bounceController.forward();
+
+      // Aktif kullanıcı tespitini tetikle
+      controller.runJavaScript(
+          'if (window.triggerUserDetection) window.triggerUserDetection();');
 
       Future.delayed(const Duration(seconds: 10), () {
         if (isLoggedIn && !isPanelOpen && !hasResults) {
@@ -425,10 +555,13 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     // Panel state'ini sıfırla
     _resetPanelState();
 
+    // Gelişmiş analiz fonksiyonunu çağır
     if (username != null) {
-      controller.runJavaScript('analyzeAccount("$username")');
+      controller.runJavaScript(
+          'if (window.analyzeAccount) window.analyzeAccount("$username")');
     } else {
-      controller.runJavaScript('analyzeAccount()');
+      controller
+          .runJavaScript('if (window.analyzeAccount) window.analyzeAccount()');
     }
   }
 
@@ -447,7 +580,8 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
       // Panel state'ini sıfırla
       _resetPanelState();
 
-      controller.runJavaScript('analyzeAccount("$username")');
+      controller.runJavaScript(
+          'if (window.analyzeAccount) window.analyzeAccount("$username")');
     }
   }
 
@@ -466,7 +600,8 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     // Panel state'ini sıfırla
     _resetPanelState();
 
-    controller.runJavaScript('analyzeAccount()');
+    controller
+        .runJavaScript('if (window.analyzeAccount) window.analyzeAccount()');
   }
 
   void clearError() {
@@ -493,6 +628,20 @@ mixin WebViewHandlersMixin<T extends StatefulWidget>
     controller.loadRequest(
       Uri.parse('https://www.instagram.com/$username/'),
     );
+  }
+
+  // YENİ: Manuel input gösterme fonksiyonu (fonksiyon adı değiştirildi)
+  void switchToManualInput() {
+    setState(() {
+      showManualInput = true;
+      currentUsername = ''; // Reset current username
+    });
+  }
+
+  // YENİ: Kullanıcı tespitini yeniden tetikleme
+  void retriggerUserDetection() {
+    controller.runJavaScript(
+        'if (window.triggerUserDetection) window.triggerUserDetection();');
   }
 
   // Panel state'ini koru

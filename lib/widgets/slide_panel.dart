@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'panel_header.dart';
-import 'panel_content/welcome_content.dart';
+import 'panel_content/smart_welcome_content.dart';
 import 'panel_content/loading_content.dart';
 import 'panel_content/error_content.dart';
 import 'panel_content/manual_input_content.dart';
@@ -29,6 +29,8 @@ class SlidePanel extends StatelessWidget {
   final VoidCallback onClearError;
   final Function(String) onToggleUserSelection;
   final Function(String) onOpenUserProfile;
+  final VoidCallback onShowManualInput; // YENİ
+  final VoidCallback onRetriggerDetection; // YENİ
 
   // Panel state preservation
   final int initialTabIndex;
@@ -60,6 +62,8 @@ class SlidePanel extends StatelessWidget {
     required this.onClearError,
     required this.onToggleUserSelection,
     required this.onOpenUserProfile,
+    required this.onShowManualInput, // YENİ
+    required this.onRetriggerDetection, // YENİ
     // Panel state preservation
     this.initialTabIndex = 0,
     this.initialSearchQuery = '',
@@ -157,9 +161,16 @@ class SlidePanel extends StatelessWidget {
         onStartAnalysis: onStartManualAnalysis,
       );
     } else {
-      return WelcomeContent(
+      // YENİ: Akıllı Welcome Content
+      final isUserDetected = currentUsername.isNotEmpty;
+
+      return SmartWelcomeContent(
         pulseAnimation: pulseAnimation,
         onAnalyzePressed: onAnalyzePressed,
+        onManualInputPressed: onShowManualInput,
+        onRetriggerDetection: onRetriggerDetection,
+        currentUsername: currentUsername,
+        isUserDetected: isUserDetected,
       );
     }
   }
